@@ -9,7 +9,7 @@
     <div class="flex-1 p-8 mx-4 px-5 overflow-hidden sm:px-6 lg:px-8">
       <div class="bg-white shadow-lg rounded-lg p-8 max-w-full">
         <div class="flex justify-between items-center mb-6">
-          <h1 class="text-3xl font-extrabold text-gray-800 flex items-center">
+          <h1 class="text-xl font-extrabold text-gray-800 flex items-center">
             <i class="fas fa-clipboard-list mr-3 text-green-500"></i>
             AI Generated Summary
           </h1>

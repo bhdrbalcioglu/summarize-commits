@@ -18,6 +18,7 @@ const routes: Array<RouteRecordRaw> = [
     name: "GitLabCallback",
     component: GitLabCallbackView,
   },
+  
   {
     path: "/groups",
     name: "Groups",

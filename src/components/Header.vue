@@ -15,14 +15,6 @@
             <i class="fa-brands fa-gitlab mr-2"></i>
             Login with Gitlab
           </button>
-          <div class="flex flex-col space-y-2 pt-5">
-            <button
-              class="text-retro-black font-bold py-2 px-4 rounded-retro-rounded border border-retro-dark-gray flex items-center w-full hover:border-retro-dark-gray hover:bg-retro-dark-gray hover:text-white"
-            >
-              <i class="fa-brands fa-github mr-2"></i>
-              Login with Github
-            </button>
-          </div>
         </div>
         <div class="flex justify-center">
           <button
