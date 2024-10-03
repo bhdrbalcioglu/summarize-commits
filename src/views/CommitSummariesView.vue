@@ -6,50 +6,58 @@
         :isLoading="projectStore.isLoading"
       />
     </div>
-    <div class="flex-1 p-8 mx-4 px-5 overflow-hidden">
+    <div class="flex-1 p-8 mx-4 px-5 overflow-hidden sm:px-6 lg:px-8">
       <div class="bg-white shadow-lg rounded-lg p-8 max-w-full">
-        <div class="flex justify-between items-center mb-4">
-          <h1 class="text-2xl font-bold">AI Generated Summary</h1>
+        <div class="flex justify-between items-center mb-6">
+          <h1 class="text-3xl font-extrabold text-gray-800 flex items-center">
+            <i class="fas fa-clipboard-list mr-3 text-green-500"></i>
+            AI Generated Summary
+          </h1>
           <button
             v-if="
               aiResponseStore &&
-              displayedText == aiResponseStore.aiResponseSecond
+              displayedText === aiResponseStore.aiResponseSecond
             "
-            class="flex items-center border border-gray-300 rounded-md px-2 py-1"
+            class="flex items-center border border-gray-300 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md px-4 py-2 transition transform hover:scale-105 duration-200"
             @click="changeDisplayedText"
           >
-            <i class="fa-solid fa-sliders mr-2"></i>
+            <i class="fas fa-sliders-h mr-2"></i>
             AI Generated Analysis
           </button>
           <button
             v-else
-            class="flex items-center border border-gray-300 rounded-md px-2 py-1"
+            class="flex items-center border border-gray-300 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md px-4 py-2 transition transform hover:scale-105 duration-200"
             @click="changeDisplayedText"
           >
-            <i class="fa-solid fa-sliders mr-2"></i>
+            <i class="fas fa-sliders-h mr-2"></i>
             AI Generated Update Note
           </button>
         </div>
-        <div class="ai-response font-mono text-base leading-relaxed relative">
-          <div v-if="isLoadingAIResponse" class="loading-indicator">
-            Loading...
+        <div
+          class="ai-response font-mono text-lg leading-relaxed relative bg-gray-50 p-4 rounded-md shadow-inner"
+        >
+          <div
+            v-if="isLoadingAIResponse"
+            class="flex items-center justify-center py-10"
+          >
+            <i class="fas fa-spinner fa-spin text-3xl text-green-500"></i>
           </div>
-          <pre v-else class="whitespace-pre-wrap break-words">
+          <pre v-else class="whitespace-pre-wrap break-words text-gray-800">
             <span v-for="(char, index) in displayedText" :key="index">{{ char }}</span>
           </pre>
         </div>
         <button
           v-show="displayedText"
-          class="copy-button mt-4 px-4 py-2 bg-blue-500 text-white rounded relative"
+          class="copy-button mt-6 px-5 py-3 bg-blue-600 text-white rounded-md flex items-center justify-center relative hover:bg-blue-700 transition duration-200"
           @click="copyToClipboard"
         >
-          <i class="fas fa-copy mr-2"></i>
+          <i class="fas fa-copy mr-3"></i>
           Copy
           <div
             v-if="copiedMessageVisible"
-            class="absolute top-1/2 left-full ml-2 cursor-default transform -translate-y-1/2 bg-gray-100 text-gray-700 text-sm rounded px-2 py-1 whitespace-nowrap"
+            class="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 bg-green-500 text-white text-sm rounded px-3 py-1 shadow-lg opacity-0 animate-fade-in"
           >
-            Copied to Clipboard
+            <i class="fas fa-check mr-2"></i> Copied to Clipboard
           </div>
         </button>
       </div>
@@ -86,6 +94,7 @@ const copyToClipboard = () => {
       console.error("Failed to copy text: ", err);
     });
 };
+
 const typeWriterEffect = (text: string) => {
   if (typewriterInterval !== null) {
     clearInterval(typewriterInterval);
@@ -107,6 +116,7 @@ const typeWriterEffect = (text: string) => {
     }
   }, typingSpeed);
 };
+
 const changeDisplayedText = () => {
   if (displayedText.value === aiResponseStore.aiResponseSecond) {
     displayedText.value = aiResponseStore.aiResponseFirst ?? "";
@@ -131,6 +141,7 @@ watch(
     isLoadingAIResponse.value = newVal;
   }
 );
+
 onUnmounted(() => {
   console.log("CommitSummariesView unmounted");
   aiResponseStore.resetAiResponse();
@@ -139,3 +150,21 @@ onUnmounted(() => {
   }
 });
 </script>
+
+<style>
+/* Add the fade-in animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s forwards;
+}
+</style>

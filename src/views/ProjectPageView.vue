@@ -53,7 +53,7 @@
         </div>
 
         <div class="overflow-x-auto">
-          <table class="min-w-full bg-white shadow-inner rounded-lg">
+          <table class="min-w-full w-full bg-white shadow-inner rounded-lg">
             <thead class="bg-gray-200">
               <tr>
                 <th
@@ -82,14 +82,22 @@
               <tr
                 v-for="commit in commits"
                 :key="commit.id"
-                class="border-b border-gray-200 hover:bg-gray-100 transition duration-200"
+                @click="toggleCommitSelection(commit.id)"
+                :class="{
+                  'bg-gray-100': selectedCommits.includes(commit.id),
+                  'hover:bg-gray-50': true,
+                  'cursor-pointer': true,
+                }"
+                class="border-b border-gray-200 transition duration-200"
               >
                 <td class="py-4 px-6">
                   <input
                     type="checkbox"
                     :value="commit.id"
+                    :checked="selectedCommits.includes(commit.id)"
                     @change="toggleCommitSelection(commit.id)"
-                    class="rounded focus:ring-green-500"
+                    @click.stop
+                    class="w-6 h-6 rounded focus:ring-green-500 cursor-pointer transition-all duration-200 ease-in-out"
                   />
                 </td>
                 <td class="py-4 px-6">
@@ -281,7 +289,8 @@ const handleSelectedCommits = async () => {
       );
       console.log("Commit Bundles:", commitBundles);
 
-      const commitMessage = await generateCommitMessage(commitBundles);
+      // Pass the array of commits instead of the entire object
+      const commitMessage = await generateCommitMessage(commitBundles.commits);
       console.log("Generated Commit Message:", commitMessage);
     } catch (error) {
       console.error("Error processing commits:", error);
