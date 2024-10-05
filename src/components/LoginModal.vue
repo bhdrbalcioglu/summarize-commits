@@ -3,13 +3,13 @@
     <Transition name="modal-outer">
       <div
         v-show="modalActive"
-        class="absolute w-full bg-retro-black bg-opacity-30 h-screen top-0 left-0 flex justify-center px-8"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 transition-opacity"
         @click="closeModal"
       >
         <Transition name="modal-inner">
           <div
             v-if="modalActive"
-            class="bg-white rounded-retro-rounded p-4 self-start mt-32 max-w-screen-2xl relative"
+            class="bg-card text-card-foreground rounded-xl p-6 max-w-lg w-full shadow-lg"
             @click.stop
           >
             <slot></slot>
@@ -37,7 +37,7 @@ const closeModal = () => {
 <style scoped>
 .modal-outer-enter-active,
 .modal-outer-leave-active {
-  transition: opacity 0.3s cubic-bezier(0.52, 0.02, 0.19, 1.02);
+  transition: opacity 0.3s ease;
 }
 
 .modal-outer-enter-from,
@@ -46,19 +46,20 @@ const closeModal = () => {
 }
 
 .modal-inner-enter-active {
-  transition: all 0.3s cubic-bezier(0.52, 0.02, 0.19, 1.02) 0.15s;
+  transition: transform 0.3s ease;
 }
 
 .modal-inner-leave-active {
-  transition: all 0.3s cubic-bezier(0.52, 0.02, 0.19, 1.02);
+  transition: transform 0.3s ease;
 }
 
 .modal-inner-enter-from {
+  transform: scale(0.9);
   opacity: 0;
-  transform: scale(0.8);
 }
 
 .modal-inner-leave-to {
-  transform: scale(0.8);
+  transform: scale(0.9);
+  opacity: 0;
 }
 </style>

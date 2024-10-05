@@ -76,3 +76,23 @@ export const getCommitsBundle = async (
   return { commits: filteredBundles };
 };
 
+export const getUserGroups = async () => {
+  const accessToken = getAccessToken();
+  try {
+    const response = await fetch("https://gitlab.com/api/v4/groups", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch groups");
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Error fetching groups:", error);
+    throw error;
+  }
+};
