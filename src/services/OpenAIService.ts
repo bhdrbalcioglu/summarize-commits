@@ -120,6 +120,7 @@ Please output the results as a JSON array without additional text. This is reall
 
 Please do not include any additional text or formatting.
 
+
 **Here are the code changes to analyze:**
 
 ${JSON.stringify(batch)}`;
@@ -183,7 +184,6 @@ export const analyzeDiffs = async (commitBundles: any[]): Promise<any[]> => {
     const batches = createCommitBatches(commitBundles);
     const analysisResults = await processCommitBatches(batches);
 
-    // Optionally, store the aggregated analysis
     const aiResponseStore = useAiResponseStore();
     aiResponseStore.setAiResponseFirst(
       JSON.stringify(analysisResults, null, 2)
@@ -201,6 +201,7 @@ export const generateUpdateNotes = async (
   allAnalysisResults: any[]
 ): Promise<string> => {
   console.log("Entered generateUpdateNotes");
+  const aiResponseStore = useAiResponseStore();
   try {
     // Group analysis results by category
     const groupedByCategory: { [key: string]: any[] } = {
@@ -238,6 +239,7 @@ export const generateUpdateNotes = async (
 - Do not include the details of the code changes in the update notes.
 - Do not include the names of the files that were changed in the update notes.
 - Do not include the commit messages in the update notes.
+- Please output the results in ${aiResponseStore.outputLanguage}. 
 
 **Here is the aggregated analysis of code changes:**
 
@@ -257,6 +259,8 @@ ${JSON.stringify(allAnalysisResults)}
       for (const category of categoriesToProcess) {
         const analyses = groupedByCategory[category];
         if (analyses && analyses.length > 0) {
+          const aiResponseStore = useAiResponseStore();
+        
           const categoryPrompt = `You are a technical writer tasked with creating clear and concise update notes for end-users based on the provided analysis of code changes.
 
 **Instructions:**
@@ -271,7 +275,7 @@ ${JSON.stringify(allAnalysisResults)}
 - Do not include the details of the code changes in the update notes.
 - Do not include the names of the files that were changed in the update notes.
 - Do not include the commit messages in the update notes.
-
+- Please output the results in ${aiResponseStore.outputLanguage}.
 **Here is the analysis of code changes:**
 
 ${JSON.stringify(analyses)}
@@ -299,7 +303,7 @@ ${JSON.stringify(analyses)}
       }
 
       // Store the final update notes
-      const aiResponseStore = useAiResponseStore();
+     
       aiResponseStore.setAiResponseSecond(finalUpdateNotes);
       console.log("Exiting generateUpdateNotes");
       return finalUpdateNotes;

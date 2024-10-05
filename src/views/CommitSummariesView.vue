@@ -71,6 +71,7 @@ import { useAiResponseStore } from "../stores/aiResponse";
 import { ref, watch, onUnmounted } from "vue";
 import ProjectCard from "../components/ProjectCard.vue";
 
+
 const projectStore = useProjectStore();
 const aiResponseStore = useAiResponseStore();
 const copiedMessageVisible = ref(false);

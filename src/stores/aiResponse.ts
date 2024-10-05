@@ -2,12 +2,16 @@ import { defineStore } from "pinia";
 
 export const useAiResponseStore = defineStore("aiResponse", {
   state: () => ({
+    outputLanguage: "english" as string,
     aiResponseFirst: null as string | null,
     isLoadingFirst: true,
     aiResponseSecond: null as string | null,
     isLoadingSecond: true,
   }),
   actions: {
+    setOutputLanguage(language: string) {
+      this.outputLanguage = language;
+    },
     setAiResponseFirst(response: string) {
       this.aiResponseFirst = response;
       this.isLoadingFirst = false;
@@ -17,6 +21,7 @@ export const useAiResponseStore = defineStore("aiResponse", {
       this.isLoadingSecond = false;
     },
     resetAiResponse() {
+      this.outputLanguage = "english";
       this.aiResponseFirst = null;
       this.aiResponseSecond = null;
       this.isLoadingFirst = true;
