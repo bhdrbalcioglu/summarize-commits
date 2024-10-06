@@ -34,7 +34,7 @@
           </button>
         </div>
         <div
-          class="ai-response font-mono text-lg leading-relaxed relative bg-gray-50 p-4 rounded-md shadow-inner"
+          class="ai-response relative bg-gray-50 p-4 rounded-md shadow-inner"
         >
           <div
             v-if="isLoadingAIResponse"
@@ -42,9 +42,12 @@
           >
             <i class="fas fa-spinner fa-spin text-3xl text-green-500"></i>
           </div>
-          <pre v-else class="whitespace-pre-wrap break-words text-gray-800">
-            <span v-for="(char, index) in displayedText" :key="index">{{ char }}</span>
-          </pre>
+          <Textarea
+            v-else
+            v-model="displayedText"
+            class="font-mono text-lg leading-relaxed"
+            :style="{ minHeight: '200px' }"
+          />
         </div>
         <button
           v-show="displayedText"
@@ -70,7 +73,7 @@ import { useProjectStore } from "../stores/project";
 import { useAiResponseStore } from "../stores/aiResponse";
 import { ref, watch, onUnmounted } from "vue";
 import ProjectCard from "../components/ProjectCard.vue";
-
+import { Textarea } from "../components/ui/textarea";
 
 const projectStore = useProjectStore();
 const aiResponseStore = useAiResponseStore();
