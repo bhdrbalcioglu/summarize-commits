@@ -10,6 +10,7 @@ export const useCommitStore = defineStore("commit", {
     currentPage: 1,
     itemsPerPage: 10,
     totalCommits: 0,
+    isMore: false,
   }),
   actions: {
     setCommits(commits: Commit[]) {
@@ -33,12 +34,18 @@ export const useCommitStore = defineStore("commit", {
     setTotalCommits(total: number) {
       this.totalCommits = total;
     },
+    setIsMore(isMore: boolean) {
+      this.isMore = isMore;
+      this.itemsPerPage = this.itemsPerPage + 10;
+    },
     clearCommits() {
       this.commits = [];
       this.selectedCommits = [];
       this.commitBundles = [];
       this.currentPage = 1;
       this.totalCommits = 0;
+      this.itemsPerPage = 10;
+      this.isMore = false;
     },
   },
 });

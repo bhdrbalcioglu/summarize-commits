@@ -13,25 +13,6 @@
             <i class="fas fa-clipboard-list mr-3 text-green-500"></i>
             AI Generated Summary
           </h1>
-          <button
-            v-if="
-              aiResponseStore &&
-              displayedText === aiResponseStore.aiResponseSecond
-            "
-            class="flex items-center border border-gray-300 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md px-4 py-2 transition transform hover:scale-105 duration-200"
-            @click="changeDisplayedText"
-          >
-            <i class="fas fa-sliders-h mr-2"></i>
-            AI Generated Analysis
-          </button>
-          <button
-            v-else
-            class="flex items-center border border-gray-300 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md px-4 py-2 transition transform hover:scale-105 duration-200"
-            @click="changeDisplayedText"
-          >
-            <i class="fas fa-sliders-h mr-2"></i>
-            AI Generated Update Note
-          </button>
         </div>
         <div
           class="ai-response relative bg-gray-50 p-4 rounded-md shadow-inner"

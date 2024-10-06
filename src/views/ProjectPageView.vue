@@ -72,7 +72,7 @@
 
         <div class="mt-4 flex justify-center">
           <button
-            v-if="hasNextPage"
+            v-if="commitStore.isMore"
             @click="fetchCommits"
             class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200"
             :disabled="isLoadingMore"
@@ -89,12 +89,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import "tailwindcss/tailwind.css";
-import { useAuthStore } from "../stores/auth";
 import { useProjectStore } from "../stores/project";
-import type { Project } from "../types/project";
 import SkeletonCard from "../components/SkeletonCard.vue";
 import SkeletonForCommits from "../components/SkeletonForCommits.vue";
 import { generateCommitMessage } from "../services/OpenAIService";
@@ -126,7 +124,7 @@ const itemsPerPage = 10;
 
 const hasNextPage = ref(true);
 const isLoadingMore = ref(false);
-
+const commitStore = useCommitStore();
 const route = useRoute();
 const router = useRouter();
 
@@ -185,8 +183,8 @@ const fetchCommits = async () => {
     const { commits: fetchedCommits, totalCommits } = await fetchCommitsService(
       projectStore.projectId.toString(),
       selectedBranch.value,
-      currentPage.value,
-      itemsPerPage
+      commitStore.currentPage,
+      commitStore.itemsPerPage
     );
 
     if (currentPage.value === 1) {
@@ -201,7 +199,6 @@ const fetchCommits = async () => {
       currentPage.value++;
     }
   } catch (error) {
-    console.error("Error fetching commits:", error);
     errorMessage.value = "Failed to fetch commits";
   } finally {
     isLoadingMore.value = false;
@@ -224,17 +221,14 @@ const handleSelectedCommits = async () => {
         name: "CommitSummaries",
         params: { id: projectStore.projectId },
       });
+
       const { commits: commitBundles } = await getCommitsBundle(
         projectStore.projectId.toString(),
         selectedCommits.value
       );
-      console.log("Commit Bundles:", commitBundles);
 
-      // Pass the array of commits instead of the entire object
       const commitMessage = await generateCommitMessage(commitBundles);
-      console.log("Generated Commit Message:", commitMessage);
     } catch (error) {
-      console.error("Error processing commits:", error);
       alert("An error occurred while summarizing commits.");
     }
   } else {
@@ -246,10 +240,17 @@ onMounted(() => {
   projectId.value = route.params.id as string;
   handleDataFetching();
 });
+onUnmounted(() => {
+  console.log("Unmounting ProjectPageView");
+  commitStore.clearCommits();
+});
 
 watch(selectedBranch, () => {
   commits.value = [];
   currentPage.value = 1;
-  fetchCommits();
+
+  if (currentPage.value > 1) {
+    fetchCommits();
+  }
 });
 </script>

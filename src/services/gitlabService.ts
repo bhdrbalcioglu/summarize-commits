@@ -6,6 +6,7 @@ import { useCommitStore } from "../stores/commit";
 import { OrderByOptions } from "../types/projectList";
 import { Project } from "../types/project";
 import { Commit, CommitDiff, CommitBundle } from "../types/commit";
+import { resolveComponent } from "vue";
 
 const getAccessToken = () => {
   const authStore = useAuthStore();
@@ -34,7 +35,9 @@ export const fetchProjects = async (params: ProjectFetchParams) => {
   const projectListStore = useProjectListStore();
   projectListStore.setIsLoading(true);
 
-  const url = params.groupId ? `/groups/${params.groupId}/projects` : "/projects";
+  const url = params.groupId
+    ? `/groups/${params.groupId}/projects`
+    : "/projects";
 
   try {
     const response = await axiosInstance.get(url, {
@@ -65,7 +68,6 @@ export const fetchProjects = async (params: ProjectFetchParams) => {
 
     return { projects, totalPages, totalProjects };
   } catch (error) {
-    console.error("Failed to fetch projects:", error);
     throw error;
   } finally {
     projectListStore.setIsLoading(false);
@@ -81,7 +83,6 @@ export const fetchProjectDetails = async (projectId: string) => {
     projectStore.setProjectDetails(data);
     return data;
   } catch (error) {
-    console.error("Failed to fetch project details:", error);
     throw error;
   } finally {
     projectStore.isLoading = false;
@@ -90,69 +91,102 @@ export const fetchProjectDetails = async (projectId: string) => {
 
 export const fetchBranches = async (projectId: string) => {
   try {
-    const response = await axiosInstance.get(`/projects/${projectId}/repository/branches`);
+    const response = await axiosInstance.get(
+      `/projects/${projectId}/repository/branches`
+    );
     return response.data;
   } catch (error) {
-    console.error("Failed to fetch branches:", error);
     throw error;
   }
 };
 
-export const fetchCommits = async (projectId: string, branch: string, page: number, perPage: number) => {
+export const fetchCommits = async (
+  projectId: string,
+  branch: string,
+  page: number,
+  perPage: number
+) => {
   const commitStore = useCommitStore();
   commitStore.setLoading(true);
 
+  console.log(`Fetching commits for project ${projectId}, branch ${branch}, page ${page}, perPage ${perPage}`);
+
   try {
-    const response = await axiosInstance.get(`/projects/${projectId}/repository/commits`, {
-      params: {
-        ref_name: branch,
-        per_page: perPage,
-        page: page,
-      },
-    });
+    const response = await axiosInstance.get(
+      `/projects/${projectId}/repository/commits`,
+      {
+        params: {
+          ref_name: branch,
+          per_page: perPage,
+          page: page,
+        },
+      }
+    );
+    console.log(`Received response for commits:`, response.data);
 
     const commits: Commit[] = response.data;
     const totalCommits = parseInt(response.headers["x-total"] || "0");
+    const nextPage = parseInt(response.headers["x-next-page"] || "0");
+    
+    console.log(`Total commits: ${totalCommits}, Next page: ${nextPage}`);
+
+    commitStore.setIsMore(nextPage > page);
 
     if (page === 1) {
+      console.log(`Setting initial commits for page 1`);
       commitStore.setCommits(commits);
     } else {
+      console.log(`Adding ${commits.length} commits to existing list`);
       commitStore.addCommits(commits);
     }
 
+    console.log(`Updating commit store - Current page: ${page}, Total commits: ${totalCommits}`);
     commitStore.setCurrentPage(page);
     commitStore.setTotalCommits(totalCommits);
 
+    console.log(`Returning ${commits.length} commits and total count of ${totalCommits}`);
     return { commits, totalCommits };
   } catch (error) {
-    console.error("Failed to fetch commits:", error);
+    console.error(`Error fetching commits for project ${projectId}:`, error);
     throw error;
   } finally {
+    console.log(`Finished fetching commits, setting loading state to false`);
     commitStore.setLoading(false);
   }
 };
 
-export const getCommitDetails = async (projectId: string, commitId: string): Promise<Commit> => {
+export const getCommitDetails = async (
+  projectId: string,
+  commitId: string
+): Promise<Commit> => {
   try {
-    const response = await axiosInstance.get(`/projects/${projectId}/repository/commits/${commitId}`);
+    const response = await axiosInstance.get(
+      `/projects/${projectId}/repository/commits/${commitId}`
+    );
     return response.data;
   } catch (error) {
-    console.error(`Failed to fetch commit details for ${commitId}:`, error);
     throw error;
   }
 };
 
-export const getCommitDiffs = async (projectId: string, commitId: string): Promise<CommitDiff[]> => {
+export const getCommitDiffs = async (
+  projectId: string,
+  commitId: string
+): Promise<CommitDiff[]> => {
   try {
-    const response = await axiosInstance.get(`/projects/${projectId}/repository/commits/${commitId}/diff`);
+    const response = await axiosInstance.get(
+      `/projects/${projectId}/repository/commits/${commitId}/diff`
+    );
     return response.data;
   } catch (error) {
-    console.error(`Failed to fetch commit diffs for ${commitId}:`, error);
     throw error;
   }
 };
 
-export const getCommitsBundle = async (projectId: string, commitIds: string[]): Promise<{ commits: CommitBundle[] }> => {
+export const getCommitsBundle = async (
+  projectId: string,
+  commitIds: string[]
+): Promise<{ commits: CommitBundle[] }> => {
   const commitStore = useCommitStore();
   commitStore.setLoading(true);
 
@@ -175,12 +209,14 @@ export const getCommitsBundle = async (projectId: string, commitIds: string[]): 
       })
     );
 
-    const filteredBundles = bundles.filter((bundle): bundle is CommitBundle => bundle !== null);
+    const filteredBundles = bundles.filter(
+      (bundle): bundle is CommitBundle => bundle !== null
+    );
+
     commitStore.setCommitBundles(filteredBundles);
 
     return { commits: filteredBundles };
   } catch (error) {
-    console.error("Error fetching commit bundles:", error);
     throw error;
   } finally {
     commitStore.setLoading(false);
@@ -192,7 +228,6 @@ export const getUserGroups = async () => {
     const response = await axiosInstance.get("/groups");
     return response.data;
   } catch (error) {
-    console.error("Error fetching groups:", error);
     throw error;
   }
 };
