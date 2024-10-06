@@ -1,21 +1,5 @@
 import { defineStore } from "pinia";
-
-export interface Project {
-  id: number;
-  name: string;
-  description: string;
-  visibility: string;
-  web_url: string;
-  last_activity_at: any;
-  created_at: string;
-  star_count: number;
-  forks_count: number;
-  default_branch: string;
-  isLoading: boolean;
-  namespace: {
-    name: string;
-  };
-}
+import { Project } from "../types/project"; // Import the Project type from the new file
 
 export const useProjectStore = defineStore("project", {
   state: () => ({

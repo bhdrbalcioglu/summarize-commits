@@ -2,7 +2,7 @@
 
 import type { ColumnDef } from "@tanstack/vue-table";
 import { h } from "vue";
-import type { Group } from "../../stores/group"; // Adjust the import path as needed
+import type { Group } from "../../types/group";
 import { ArrowUpDown, ChevronDown } from "lucide-vue-next";
 import { Button } from "../../components/ui/button";
 

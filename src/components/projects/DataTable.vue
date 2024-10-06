@@ -36,7 +36,7 @@
         </template>
         <template v-else>
           <TableRow>
-            <TableCell :colspan="props.columns.length" class="h-24 text-center">
+            <TableCell :colspan="columns.length" class="h-24 text-center">
               No results.
             </TableCell>
           </TableRow>
@@ -47,7 +47,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
+import { OrderByOptions } from "../../types/projectList";
 import {
   useVueTable,
   getCoreRowModel,
@@ -64,30 +65,45 @@ import {
   TableCell,
 } from "../../components/ui/table";
 import { FlexRender } from "@tanstack/vue-table";
-import type { Group } from "../../types/group";
-import { valueUpdater } from "../lib/utils";
-
-const props = defineProps<{
-  columns: ColumnDef<Group>[];
-  data: Group[];
-}>();
+import type { Project } from "../../types/project";
+import { columns } from "./columns";
+import { useProjectListStore } from "../../stores/projectList";
+import { storeToRefs } from "pinia";
 
 const emit = defineEmits<{
-  (e: "rowClick", rowData: Group): void;
+  (e: "rowClick", rowData: Project): void;
 }>();
 
-const sorting = ref<SortingState>([]);
+const projectListStore = useProjectListStore();
+const { projects, orderBy, sortOrder } = storeToRefs(projectListStore);
 
-const table = useVueTable<Group>({
+const sorting = computed({
+  get: () => [{ id: orderBy.value, desc: sortOrder.value === "desc" }],
+  set: (value) => {
+    if (value.length > 0) {
+      projectListStore.setOrderBy(value[0].id as any);
+      projectListStore.setSortOrder(value[0].desc ? "desc" : "asc");
+    }
+  },
+});
+
+const table = useVueTable<Project>({
   get data() {
-    return props.data;
+    return projects.value;
   },
-  get columns() {
-    return props.columns;
-  },
+  columns,
   getCoreRowModel: getCoreRowModel(),
   getSortedRowModel: getSortedRowModel(),
-  onSortingChange: (updaterOrValue) => valueUpdater(updaterOrValue, sorting),
+  onSortingChange: (updaterOrValue) => {
+    if (typeof updaterOrValue === "function") {
+      sorting.value = updaterOrValue(sorting.value) as {
+        id: OrderByOptions;
+        desc: boolean;
+      }[];
+    } else {
+      sorting.value = updaterOrValue as { id: OrderByOptions; desc: boolean }[];
+    }
+  },
   state: {
     get sorting() {
       return sorting.value;

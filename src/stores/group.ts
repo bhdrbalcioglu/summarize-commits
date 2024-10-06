@@ -1,16 +1,5 @@
 import { defineStore } from "pinia";
-
-export interface Group {
-  id: number;
-  avatar_url: string;
-  created_at: string;
-  description: string;
-  full_name: string;
-  full_path: string;
-  visibility: string;
-  web_url: string;
-  [key: string]: any; // Add this to accommodate any extra properties
-}
+import { Group } from "../types/group"; // Importing Group type
 
 export const useGroupStore = defineStore("group", {
   state: () => ({

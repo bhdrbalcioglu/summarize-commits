@@ -1,61 +1,170 @@
+import axios from "axios";
 import { useAuthStore } from "../stores/auth";
+import { useProjectListStore } from "../stores/projectList";
+import { useProjectStore } from "../stores/project";
+import { useCommitStore } from "../stores/commit";
+import { OrderByOptions } from "../types/projectList";
+import { Project } from "../types/project";
+import { Commit, CommitDiff, CommitBundle } from "../types/commit";
 
 const getAccessToken = () => {
   const authStore = useAuthStore();
   return authStore.accessToken;
 };
 
-// Function to fetch commit details
-export const getCommitDetails = async (projectId: string, commitId: string) => {
-  const accessToken = getAccessToken();
-  const response = await fetch(
-    `https://gitlab.com/api/v4/projects/${projectId}/repository/commits/${commitId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
+const axiosInstance = axios.create({
+  baseURL: "https://gitlab.com/api/v4",
+});
+
+axiosInstance.interceptors.request.use((config) => {
+  config.headers.Authorization = `Bearer ${getAccessToken()}`;
+  return config;
+});
+
+export interface ProjectFetchParams {
+  groupId?: string;
+  orderBy: OrderByOptions;
+  sortOrder: "asc" | "desc";
+  itemsPerPage: number;
+  currentPage: number;
+  searchTerm?: string;
+}
+
+export const fetchProjects = async (params: ProjectFetchParams) => {
+  const projectListStore = useProjectListStore();
+  projectListStore.setIsLoading(true);
+
+  const url = params.groupId ? `/groups/${params.groupId}/projects` : "/projects";
+
+  try {
+    const response = await axiosInstance.get(url, {
+      params: {
+        membership: true,
+        order_by: params.orderBy,
+        sort: params.sortOrder,
+        per_page: params.itemsPerPage,
+        page: params.currentPage,
+        search: params.searchTerm || undefined,
       },
-    }
-  );
-  if (!response.ok) {
-    throw new Error(`Failed to fetch commit details for ${commitId}`);
+    });
+
+    const projects: Project[] = response.data;
+    const totalPages = parseInt(response.headers["x-total-pages"] || "1");
+    const totalProjects = parseInt(response.headers["x-total"] || "0");
+
+    projectListStore.updateProjectListState({
+      projects,
+      totalPages,
+      totalProjects,
+      currentPage: params.currentPage,
+      itemsPerPage: params.itemsPerPage,
+      orderBy: params.orderBy,
+      sortOrder: params.sortOrder,
+      searchTerm: params.searchTerm || "",
+    });
+
+    return { projects, totalPages, totalProjects };
+  } catch (error) {
+    console.error("Failed to fetch projects:", error);
+    throw error;
+  } finally {
+    projectListStore.setIsLoading(false);
   }
-  const data = await response.json();
-  return data;
 };
 
-// Function to fetch commit diffs
-export const getCommitDiffs = async (projectId: string, commitId: string) => {
-  const accessToken = getAccessToken();
-  const response = await fetch(
-    `https://gitlab.com/api/v4/projects/${projectId}/repository/commits/${commitId}/diff`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
-  if (!response.ok) {
-    throw new Error(`Failed to fetch commit diffs for ${commitId}`);
+export const fetchProjectDetails = async (projectId: string) => {
+  const projectStore = useProjectStore();
+  projectStore.isLoading = true;
+
+  try {
+    const { data } = await axiosInstance.get(`/projects/${projectId}`);
+    projectStore.setProjectDetails(data);
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch project details:", error);
+    throw error;
+  } finally {
+    projectStore.isLoading = false;
   }
-  const data = await response.json();
-  return data;
 };
 
-// Function to fetch details and diffs for multiple commits and structure the data
-export const getCommitsBundle = async (
-  projectId: string,
-  commitIds: string[]
-) => {
-  const bundles = await Promise.all(
-    commitIds.map(async (commitId) => {
-      try {
+export const fetchBranches = async (projectId: string) => {
+  try {
+    const response = await axiosInstance.get(`/projects/${projectId}/repository/branches`);
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch branches:", error);
+    throw error;
+  }
+};
+
+export const fetchCommits = async (projectId: string, branch: string, page: number, perPage: number) => {
+  const commitStore = useCommitStore();
+  commitStore.setLoading(true);
+
+  try {
+    const response = await axiosInstance.get(`/projects/${projectId}/repository/commits`, {
+      params: {
+        ref_name: branch,
+        per_page: perPage,
+        page: page,
+      },
+    });
+
+    const commits: Commit[] = response.data;
+    const totalCommits = parseInt(response.headers["x-total"] || "0");
+
+    if (page === 1) {
+      commitStore.setCommits(commits);
+    } else {
+      commitStore.addCommits(commits);
+    }
+
+    commitStore.setCurrentPage(page);
+    commitStore.setTotalCommits(totalCommits);
+
+    return { commits, totalCommits };
+  } catch (error) {
+    console.error("Failed to fetch commits:", error);
+    throw error;
+  } finally {
+    commitStore.setLoading(false);
+  }
+};
+
+export const getCommitDetails = async (projectId: string, commitId: string): Promise<Commit> => {
+  try {
+    const response = await axiosInstance.get(`/projects/${projectId}/repository/commits/${commitId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to fetch commit details for ${commitId}:`, error);
+    throw error;
+  }
+};
+
+export const getCommitDiffs = async (projectId: string, commitId: string): Promise<CommitDiff[]> => {
+  try {
+    const response = await axiosInstance.get(`/projects/${projectId}/repository/commits/${commitId}/diff`);
+    return response.data;
+  } catch (error) {
+    console.error(`Failed to fetch commit diffs for ${commitId}:`, error);
+    throw error;
+  }
+};
+
+export const getCommitsBundle = async (projectId: string, commitIds: string[]): Promise<{ commits: CommitBundle[] }> => {
+  const commitStore = useCommitStore();
+  commitStore.setLoading(true);
+
+  try {
+    const bundles = await Promise.all(
+      commitIds.map(async (commitId) => {
         const details = await getCommitDetails(projectId, commitId);
         const diffs = await getCommitDiffs(projectId, commitId);
 
-        // Transform the data into the required format
-        const filesChanged = diffs.map((diff: any) => ({
+        const filesChanged = diffs.map((diff) => ({
           file_path: diff.new_path || diff.old_path,
-          diff: diff.diff, // This is the diff text provided by GitLab API
+          diff: diff.diff,
         }));
 
         return {
@@ -63,34 +172,25 @@ export const getCommitsBundle = async (
           message: details.message,
           files_changed: filesChanged,
         };
-      } catch (error) {
-        console.error(`Error fetching data for commit ${commitId}:`, error);
-        return null; // Handle errors per commit as needed
-      }
-    })
-  );
+      })
+    );
 
-  // Filter out any null entries due to errors
-  const filteredBundles = bundles.filter((bundle) => bundle !== null);
+    const filteredBundles = bundles.filter((bundle): bundle is CommitBundle => bundle !== null);
+    commitStore.setCommitBundles(filteredBundles);
 
-  return { commits: filteredBundles };
+    return { commits: filteredBundles };
+  } catch (error) {
+    console.error("Error fetching commit bundles:", error);
+    throw error;
+  } finally {
+    commitStore.setLoading(false);
+  }
 };
 
 export const getUserGroups = async () => {
-  const accessToken = getAccessToken();
   try {
-    const response = await fetch("https://gitlab.com/api/v4/groups", {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch groups");
-    }
-
-    const data = await response.json();
-    return data;
+    const response = await axiosInstance.get("/groups");
+    return response.data;
   } catch (error) {
     console.error("Error fetching groups:", error);
     throw error;

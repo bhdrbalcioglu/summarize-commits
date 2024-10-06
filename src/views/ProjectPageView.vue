@@ -64,99 +64,24 @@
             </button>
           </div>
         </div>
+        <DataTable
+          :commits="commits as Commit[]"
+          :selectedCommits="selectedCommits"
+          @toggleSelection="toggleCommitSelection"
+        />
 
-        <div class="overflow-x-auto">
-          <table class="min-w-full w-full bg-white shadow-inner rounded-lg">
-            <thead class="bg-gray-200">
-              <tr>
-                <th
-                  class="py-3 px-6 text-left text-sm font-semibold text-gray-700"
-                >
-                  Select
-                </th>
-                <th
-                  class="py-3 px-6 text-left text-sm font-semibold text-gray-700"
-                >
-                  Commit Message
-                </th>
-                <th
-                  class="py-3 px-6 text-left text-sm font-semibold text-gray-700"
-                >
-                  Date
-                </th>
-                <th
-                  class="py-3 px-6 text-left text-sm font-semibold text-gray-700"
-                >
-                  Author
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="commit in commits"
-                :key="commit.id"
-                @click="toggleCommitSelection(commit.id)"
-                :class="{
-                  'bg-gray-100': selectedCommits.includes(commit.id),
-                  'hover:bg-gray-50': true,
-                  'cursor-pointer': true,
-                }"
-                class="border-b border-gray-200 transition duration-200"
-              >
-                <td class="py-4 px-6">
-                  <input
-                    type="checkbox"
-                    :value="commit.id"
-                    :checked="selectedCommits.includes(commit.id)"
-                    @change="toggleCommitSelection(commit.id)"
-                    @click.stop
-                    class="w-6 h-6 rounded focus:ring-green-500 cursor-pointer transition-all duration-200 ease-in-out"
-                  />
-                </td>
-                <td class="py-4 px-6">
-                  <p class="font-semibold text-gray-800">
-                    {{ commit.message }}
-                  </p>
-                </td>
-                <td class="py-4 px-6">
-                  <p class="text-sm text-gray-500">
-                    {{
-                      new Date(commit.created_at).toLocaleString("en-GB", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    }}
-                  </p>
-                </td>
-                <td class="py-4 px-6">
-                  <p class="text-sm text-gray-500">
-                    {{ commit.committer_name }}
-                  </p>
-                </td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="4" class="py-4">
-                  <div class="flex items-center justify-center">
-                    <button
-                      v-if="hasNextPage"
-                      @click="fetchCommits"
-                      class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200"
-                    >
-                      Load More
-                    </button>
-                    <span v-else class="text-gray-500 text-sm">
-                      No more commits to load.
-                    </span>
-                  </div>
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+        <div class="mt-4 flex justify-center">
+          <button
+            v-if="hasNextPage"
+            @click="fetchCommits"
+            class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200"
+            :disabled="isLoadingMore"
+          >
+            {{ isLoadingMore ? "Loading..." : "Load More" }}
+          </button>
+          <span v-else class="text-gray-500 text-sm">
+            No more commits to load.
+          </span>
         </div>
       </div>
     </div>
@@ -164,20 +89,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import axios from "axios";
 import "tailwindcss/tailwind.css";
 import { useAuthStore } from "../stores/auth";
-import { useProjectStore, Project } from "../stores/project";
+import { useProjectStore } from "../stores/project";
+import type { Project } from "../types/project";
 import SkeletonCard from "../components/SkeletonCard.vue";
-import { getCommitsBundle } from "../services/gitlabService";
 import SkeletonForCommits from "../components/SkeletonForCommits.vue";
 import { generateCommitMessage } from "../services/OpenAIService";
 import ProjectCard from "../components/ProjectCard.vue";
 import { useAiResponseStore } from "../stores/aiResponse";
+import DataTable from "../components/commits/DataTable.vue";
+import type { Commit } from "../types/commit";
 
-const authStore = useAuthStore();
+import { useCommitStore } from "../stores/commit";
+import {
+  fetchProjectDetails as fetchProjectDetailsService,
+  fetchBranches as fetchBranchesService,
+  fetchCommits as fetchCommitsService,
+  getCommitsBundle,
+} from "../services/gitlabService";
+
 const projectStore = useProjectStore();
 const aiResponseStore = useAiResponseStore();
 
@@ -201,46 +134,34 @@ const setOutputLanguage = (language: string) => {
   aiResponseStore.setOutputLanguage(language);
 };
 
-const handleDataFetching = () => {
+const handleDataFetching = async () => {
   isLoading.value = true;
-  fetchProjectDetails();
-  fetchBranches();
-  fetchCommits();
+  await fetchProjectDetails();
+  await fetchBranches();
+  await fetchCommits();
   isLoading.value = false;
 };
 
 const fetchProjectDetails = async () => {
   try {
     projectId.value = projectStore.projectId?.toString() || null;
-    projectStore.isLoading = true;
-    const { data } = await axios.get(
-      `https://gitlab.com/api/v4/projects/${projectId.value}`,
-      {
-        headers: {
-          Authorization: `Bearer ${authStore.accessToken}`,
-        },
-      }
-    );
-    projectStore.setProjectDetails(data);
-    console.log("Project Details:", projectStore.projectId);
+    if (projectId.value) {
+      await fetchProjectDetailsService(projectId.value);
+    }
   } catch (error) {
     errorMessage.value = "Failed to fetch project details";
-  } finally {
   }
 };
 
 const fetchBranches = async () => {
   try {
-    const response = await axios.get(
-      `https://gitlab.com/api/v4/projects/${projectStore.projectId}/repository/branches`,
-      {
-        headers: {
-          Authorization: `Bearer ${authStore.accessToken}`,
-        },
-      }
-    );
-    branches.value = response.data;
-    selectedBranch.value = branches.value[0]?.name || "";
+    if (projectStore.projectId) {
+      const branchesData = await fetchBranchesService(
+        projectStore.projectId.toString()
+      );
+      branches.value = branchesData;
+      selectedBranch.value = branches.value[0]?.name || "";
+    }
   } catch (error) {
     errorMessage.value = "Failed to fetch branches";
   }
@@ -252,29 +173,29 @@ const fetchCommits = async () => {
 
     if (!selectedBranch.value) {
       await fetchBranches();
-    }
-    const response = await axios.get(
-      `https://gitlab.com/api/v4/projects/${projectStore.projectId}/repository/commits`,
-      {
-        headers: {
-          Authorization: `Bearer ${authStore.accessToken}`,
-        },
-        params: {
-          ref_name: selectedBranch.value,
-          per_page: itemsPerPage,
-          page: currentPage.value,
-        },
+      if (!selectedBranch.value) {
+        throw new Error("No branch selected");
       }
+    }
+
+    if (!projectStore.projectId) {
+      throw new Error("No project ID available");
+    }
+
+    const { commits: fetchedCommits, totalCommits } = await fetchCommitsService(
+      projectStore.projectId.toString(),
+      selectedBranch.value,
+      currentPage.value,
+      itemsPerPage
     );
-    const { data, headers } = response;
 
     if (currentPage.value === 1) {
-      commits.value = data;
+      commits.value = fetchedCommits;
     } else {
-      commits.value = [...commits.value, ...data];
+      commits.value = [...commits.value, ...fetchedCommits];
     }
 
-    hasNextPage.value = data.length === itemsPerPage;
+    hasNextPage.value = commits.value.length < totalCommits;
 
     if (hasNextPage.value) {
       currentPage.value++;
@@ -282,8 +203,9 @@ const fetchCommits = async () => {
   } catch (error) {
     console.error("Error fetching commits:", error);
     errorMessage.value = "Failed to fetch commits";
+  } finally {
+    isLoadingMore.value = false;
   }
-  isLoadingMore.value = false;
 };
 
 const toggleCommitSelection = (commitId: string) => {
@@ -302,14 +224,14 @@ const handleSelectedCommits = async () => {
         name: "CommitSummaries",
         params: { id: projectStore.projectId },
       });
-      const commitBundles = await getCommitsBundle(
+      const { commits: commitBundles } = await getCommitsBundle(
         projectStore.projectId.toString(),
         selectedCommits.value
       );
       console.log("Commit Bundles:", commitBundles);
 
       // Pass the array of commits instead of the entire object
-      const commitMessage = await generateCommitMessage(commitBundles.commits);
+      const commitMessage = await generateCommitMessage(commitBundles);
       console.log("Generated Commit Message:", commitMessage);
     } catch (error) {
       console.error("Error processing commits:", error);
