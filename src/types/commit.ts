@@ -24,6 +24,7 @@ export interface CommitDiff {
 }
 
 export interface CommitBundle {
+  author_name: string;
   commit_id: string;
   message: string;
   files_changed: {
@@ -31,3 +32,5 @@ export interface CommitBundle {
     diff: string;
   }[];
 }
+
+

@@ -1,6 +1,5 @@
 import axios from "axios";
 import { useAiResponseStore } from "../stores/aiResponse";
-
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 const OPENAI_API_URL = "https://api.openai.com/v1/chat/completions";
 
@@ -110,6 +109,7 @@ For each code change, please provide the following in JSON format:
 {
   "commitMessage": "Commit message here",
   "commitID": "Commit ID here",
+  "authorName": "Author name here",
   "description": "Brief summary of the change",
   "category": "One of Bug Fix, Improvement, New Feature, Refactoring, Documentation Update, Other",
   "affectedAreas": ["List of affected modules or areas"],
@@ -188,7 +188,7 @@ export const analyzeDiffs = async (commitBundles: any[]): Promise<any[]> => {
     aiResponseStore.setAiResponseFirst(
       JSON.stringify(analysisResults, null, 2)
     );
-    console.log("Exiting analyzeDiffs");
+    console.log("Exiting analyzeDiffs", analysisResults);
     return analysisResults; // Return aggregated analysis results
   } catch (error) {
     console.error("Error analyzing diffs:", error);
@@ -202,6 +202,7 @@ export const generateUpdateNotes = async (
 ): Promise<string> => {
   console.log("Entered generateUpdateNotes");
   const aiResponseStore = useAiResponseStore();
+
   try {
     // Group analysis results by category
     const groupedByCategory: { [key: string]: any[] } = {
@@ -220,7 +221,8 @@ export const generateUpdateNotes = async (
       }
       groupedByCategory[category].push(analysis);
     }
-
+    console.log("groupedByCategory", groupedByCategory);
+    console.log("isAuthorIncluded", aiResponseStore.isAuthorIncluded);
     // Prepare the final prompt
     const prompt = `You are a technical writer tasked with creating clear and concise update notes for end-users based on the provided analysis of code changes.
 
@@ -240,6 +242,11 @@ export const generateUpdateNotes = async (
 - Do not include the names of the files that were changed in the update notes.
 - Do not include the commit messages in the update notes.
 - Please output the results in ${aiResponseStore.outputLanguage}. 
+${
+  aiResponseStore.isAuthorIncluded
+    ? `- Please group the update notes by author name.`
+    : ""
+}
 
 **Here is the aggregated analysis of code changes:**
 
@@ -260,7 +267,7 @@ ${JSON.stringify(allAnalysisResults)}
         const analyses = groupedByCategory[category];
         if (analyses && analyses.length > 0) {
           const aiResponseStore = useAiResponseStore();
-        
+
           const categoryPrompt = `You are a technical writer tasked with creating clear and concise update notes for end-users based on the provided analysis of code changes.
 
 **Instructions:**
@@ -303,7 +310,7 @@ ${JSON.stringify(analyses)}
       }
 
       // Store the final update notes
-     
+
       aiResponseStore.setAiResponseSecond(finalUpdateNotes);
       console.log("Exiting generateUpdateNotes");
       return finalUpdateNotes;

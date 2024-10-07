@@ -39,11 +39,25 @@
                 {{ branch.name }}
               </option>
             </select>
+
+            <div class="flex items-center gap-x-2 pt-6 w-full md:w-auto">
+              <Checkbox id="terms1" @update:checked="toggleAuthorIncluded" />
+              <div class="grid leading-none">
+                <label
+                  for="terms1"
+                  class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Include author name in the summary
+                </label>
+                <p class="text-sm text-muted-foreground">
+                  Group the Update Notes by Authors to see which developers
+                  contributed the most.
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div
-            class="w-full md:w-auto flex flex-col md:flex-row justify-center md:justify-end space-y-4 md:space-y-0 md:space-x-4"
-          >
+          <div class="flex items-center gap-x-2 w-full md:w-auto">
             <select
               v-model="aiResponseStore.outputLanguage"
               @update:modelValue="setOutputLanguage"
@@ -89,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, onUnmounted } from "vue";
+import { ref, onMounted, watch, onUnmounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import "tailwindcss/tailwind.css";
 import { useProjectStore } from "../stores/project";
@@ -100,6 +114,7 @@ import ProjectCard from "../components/ProjectCard.vue";
 import { useAiResponseStore } from "../stores/aiResponse";
 import DataTable from "../components/commits/DataTable.vue";
 import type { Commit } from "../types/commit";
+import { Checkbox } from "../components/ui/checkbox/";
 
 import { useCommitStore } from "../stores/commit";
 import {
@@ -120,7 +135,6 @@ const selectedCommits = ref<Array<string>>([]);
 const isLoading = ref<boolean>(true);
 const errorMessage = ref<string | null>(null);
 const currentPage = ref<number>(1);
-const itemsPerPage = 10;
 
 const hasNextPage = ref(true);
 const isLoadingMore = ref(false);
@@ -130,6 +144,10 @@ const router = useRouter();
 
 const setOutputLanguage = (language: string) => {
   aiResponseStore.setOutputLanguage(language);
+};
+
+const toggleAuthorIncluded = (value: boolean) => {
+  aiResponseStore.setIsAuthorIncluded(value);
 };
 
 const handleDataFetching = async () => {

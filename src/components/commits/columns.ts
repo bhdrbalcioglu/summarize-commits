@@ -1,24 +1,39 @@
 import type { ColumnDef } from "@tanstack/vue-table";
-import { h } from "vue";
+import { h, Ref } from "vue";
 import type { Commit } from "../../types/commit";
 import { ArrowUpDown } from "lucide-vue-next";
 import { Button } from "../../components/ui/button";
 import { Checkbox } from "../../components/ui/checkbox";
+import { FilterFn } from "@tanstack/vue-table";
+import AuthorFilterHeader from "./AuthorFilterHeader.vue";
 
-export const columns: ColumnDef<Commit>[] = [
+const authorFilterFn: FilterFn<Commit> = (row, columnId, filterValue) => {
+  if (!filterValue || filterValue.length === 0) {
+    return true; // No filter applied
+  }
+  const authorName = row.getValue(columnId);
+  const result = filterValue.includes(authorName);
+  return result;
+};
+
+export const columns = (
+  selectedAuthors: Ref<string[]>,
+  authorsList: Ref<string[]>
+): ColumnDef<Commit>[] => [
   {
     id: "select",
-    header: ({ table }) =>
+    header: ({ table }: { table: any }) =>
       h(Checkbox, {
         checked: table.getIsAllPageRowsSelected(),
-        "onUpdate:checked": (value) => table.toggleAllPageRowsSelected(!!value),
+        "onUpdate:checked": (value: boolean) =>
+          table.toggleAllPageRowsSelected(!!value),
         "aria-label": "Select all",
         class: "w-5 h-5",
       }),
-    cell: ({ row }) =>
+    cell: ({ row }: { row: any }) =>
       h(Checkbox, {
         checked: row.getIsSelected(),
-        "onUpdate:checked": (value) => row.toggleSelected(!!value),
+        "onUpdate:checked": (value: boolean) => row.toggleSelected(!!value),
         "aria-label": "Select row",
         class: "w-5 h-5 transition-all duration-200 ease-in-out",
         style: row.getIsSelected()
@@ -31,13 +46,13 @@ export const columns: ColumnDef<Commit>[] = [
   {
     accessorKey: "short_id",
     header: "ID",
-    cell: ({ row }) =>
+    cell: ({ row }: { row: any }) =>
       h("span", { class: "font-mono" }, row.getValue("short_id")),
   },
   {
     accessorKey: "title",
     header: "Title",
-    cell: ({ row }) =>
+    cell: ({ row }: { row: any }) =>
       h(
         "span",
         { class: "truncate max-w-md" },
@@ -46,12 +61,21 @@ export const columns: ColumnDef<Commit>[] = [
   },
   {
     accessorKey: "author_name",
-    header: "Author",
+    header: () => {
+      return h(AuthorFilterHeader, {
+        selectedAuthors: selectedAuthors.value,
+        authorsList: authorsList.value,
+        "onUpdate:selectedAuthors": (newAuthors: string[]) => {
+          selectedAuthors.value = newAuthors;
+        },
+      });
+    },
     cell: ({ row }) => row.getValue("author_name"),
+    filterFn: authorFilterFn, // Use the built-in filter function
   },
   {
     accessorKey: "created_at",
-    header: ({ column }) => {
+    header: ({ column }: { column: any }) => {
       return h(
         Button,
         {
@@ -62,7 +86,7 @@ export const columns: ColumnDef<Commit>[] = [
         () => ["Date", h(ArrowUpDown, { class: "ml-2 h-4 w-4" })]
       );
     },
-    cell: ({ row }) => {
+    cell: ({ row }: { row: any }) => {
       const date = new Date(row.getValue("created_at"));
       return date.toLocaleString();
     },
@@ -70,7 +94,7 @@ export const columns: ColumnDef<Commit>[] = [
   {
     accessorKey: "web_url",
     header: "Actions",
-    cell: ({ row }) =>
+    cell: ({ row }: { row: any }) =>
       h(
         "a",
         {

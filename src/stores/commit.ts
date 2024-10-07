@@ -38,6 +38,7 @@ export const useCommitStore = defineStore("commit", {
       this.isMore = isMore;
       this.itemsPerPage = this.itemsPerPage + 10;
     },
+
     clearCommits() {
       this.commits = [];
       this.selectedCommits = [];

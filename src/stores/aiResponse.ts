@@ -7,6 +7,7 @@ export const useAiResponseStore = defineStore("aiResponse", {
     isLoadingFirst: true,
     aiResponseSecond: null as string | null,
     isLoadingSecond: true,
+    isAuthorIncluded: false,
   }),
   actions: {
     setOutputLanguage(language: string) {
@@ -26,6 +27,10 @@ export const useAiResponseStore = defineStore("aiResponse", {
       this.aiResponseSecond = null;
       this.isLoadingFirst = true;
       this.isLoadingSecond = true;
+      this.isAuthorIncluded = false;
+    },
+    setIsAuthorIncluded(isAuthorIncluded: boolean) {
+      this.isAuthorIncluded = isAuthorIncluded;
     },
   },
 });

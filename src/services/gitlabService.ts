@@ -109,7 +109,9 @@ export const fetchCommits = async (
   const commitStore = useCommitStore();
   commitStore.setLoading(true);
 
-  console.log(`Fetching commits for project ${projectId}, branch ${branch}, page ${page}, perPage ${perPage}`);
+  console.log(
+    `Fetching commits for project ${projectId}, branch ${branch}, page ${page}, perPage ${perPage}`
+  );
 
   try {
     const response = await axiosInstance.get(
@@ -127,7 +129,7 @@ export const fetchCommits = async (
     const commits: Commit[] = response.data;
     const totalCommits = parseInt(response.headers["x-total"] || "0");
     const nextPage = parseInt(response.headers["x-next-page"] || "0");
-    
+
     console.log(`Total commits: ${totalCommits}, Next page: ${nextPage}`);
 
     commitStore.setIsMore(nextPage > page);
@@ -140,11 +142,15 @@ export const fetchCommits = async (
       commitStore.addCommits(commits);
     }
 
-    console.log(`Updating commit store - Current page: ${page}, Total commits: ${totalCommits}`);
+    console.log(
+      `Updating commit store - Current page: ${page}, Total commits: ${totalCommits}`
+    );
     commitStore.setCurrentPage(page);
     commitStore.setTotalCommits(totalCommits);
 
-    console.log(`Returning ${commits.length} commits and total count of ${totalCommits}`);
+    console.log(
+      `Returning ${commits.length} commits and total count of ${totalCommits}`
+    );
     return { commits, totalCommits };
   } catch (error) {
     console.error(`Error fetching commits for project ${projectId}:`, error);
@@ -202,6 +208,7 @@ export const getCommitsBundle = async (
         }));
 
         return {
+          author_name: details.author_name,
           commit_id: details.id,
           message: details.message,
           files_changed: filesChanged,

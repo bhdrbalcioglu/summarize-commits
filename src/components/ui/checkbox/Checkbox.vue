@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type HTMLAttributes, computed } from "vue";
+import { type HTMLAttributes, computed, watch } from "vue";
 import type { CheckboxRootEmits, CheckboxRootProps } from "radix-vue";
 import {
   CheckboxIndicator,

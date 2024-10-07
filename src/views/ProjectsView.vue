@@ -92,14 +92,14 @@ const props = defineProps({
 const router = useRouter();
 const projectStore = useProjectStore();
 const projectListStore = useProjectListStore();
-const { 
-  currentPage, 
-  itemsPerPage, 
-  totalPages, 
-  searchTerm, 
-  orderBy, 
-  sortOrder, 
-  isLoading 
+const {
+  currentPage,
+  itemsPerPage,
+  totalPages,
+  searchTerm,
+  orderBy,
+  sortOrder,
+  isLoading,
 } = storeToRefs(projectListStore);
 
 const fetchProjectsData = async () => {
@@ -149,6 +149,7 @@ const prevPage = () => {
 
 const navigateToProject = (project: Project) => {
   projectStore.setProjectDetails(project);
+  searchTerm.value = "";
   router.push({
     name: "ProjectPage",
     params: { name: project.name, id: project.id.toString() },

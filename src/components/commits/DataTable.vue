@@ -17,14 +17,13 @@
         </TableRow>
       </TableHeader>
       <TableBody>
-        <template v-if="table.getRowModel().rows.length">
+        <template v-if="table.getFilteredRowModel().rows.length">
           <TableRow
-            v-for="row in table.getRowModel().rows"
+            v-for="row in table.getFilteredRowModel().rows"
             :key="row.id"
             :class="{
               'bg-blue-100 border-l-4 border-blue-500 shadow-md':
                 row.getIsSelected(),
-
               'transition-all duration-100 ease-in-out': true,
             }"
             class="border-b border-gray-200"
@@ -45,7 +44,10 @@
         </template>
         <template v-else>
           <TableRow>
-            <TableCell :colspan="columns.length" class="h-24 text-center">
+            <TableCell
+              :colspan="columnsWithFilters.length"
+              class="h-24 text-center"
+            >
               No results.
             </TableCell>
           </TableRow>
@@ -62,6 +64,7 @@ import {
   getCoreRowModel,
   getSortedRowModel,
   getFilteredRowModel,
+  type ColumnFiltersState,
 } from "@tanstack/vue-table";
 import {
   Table,
@@ -79,6 +82,13 @@ const props = defineProps<{
   commits: Commit[];
   selectedCommits: string[];
 }>();
+const columnFilters = ref<ColumnFiltersState>([]);
+const selectedAuthors = ref<string[]>([]);
+
+const authorsList = computed(() => {
+  return Array.from(new Set(props.commits.map((commit) => commit.author_name)));
+});
+const columnsWithFilters = columns(selectedAuthors, authorsList);
 
 const emit = defineEmits<{
   (e: "toggleSelection", commitId: string): void;
@@ -97,7 +107,7 @@ const table = useVueTable({
   get data() {
     return props.commits;
   },
-  columns,
+  columns: columnsWithFilters,
   state: {
     get sorting() {
       return sorting.value;
@@ -105,7 +115,11 @@ const table = useVueTable({
     get rowSelection() {
       return rowSelection.value;
     },
+    get columnFilters() {
+      return columnFilters.value;
+    },
   },
+
   onSortingChange: (updaterOrValue) => {
     sorting.value =
       typeof updaterOrValue === "function"
@@ -118,7 +132,6 @@ const table = useVueTable({
         ? updaterOrValue(rowSelection.value as Record<number, boolean>)
         : updaterOrValue;
 
-    // Find the changed row
     const changedIndex = Object.keys(newSelection).find((index) => {
       const numIndex = Number(index);
       return (
@@ -139,7 +152,6 @@ const table = useVueTable({
   getFilteredRowModel: getFilteredRowModel(),
 });
 
-// Sync rowSelection with selectedCommits prop
 watch(
   () => props.selectedCommits,
   (newSelectedCommits) => {
@@ -151,7 +163,6 @@ watch(
   { immediate: true }
 );
 
-// Sync selectedCommits with rowSelection
 watch(selectedCommitIds, (newSelectedIds) => {
   const addedIds = newSelectedIds.filter(
     (id) => !props.selectedCommits.includes(id)
@@ -163,4 +174,22 @@ watch(selectedCommitIds, (newSelectedIds) => {
   addedIds.forEach((id) => emit("toggleSelection", id));
   removedIds.forEach((id) => emit("toggleSelection", id));
 });
+
+watch(selectedAuthors, (newAuthors) => {
+  console.log("Selected authors changed:", newAuthors);
+  columnFilters.value = [
+    {
+      id: "author_name",
+      value: newAuthors,
+    },
+  ];
+});
+
+watch(
+  () => table.getState().columnFilters,
+  (newFilters) => {
+    console.log("Column filters updated:", newFilters);
+  },
+  { deep: true }
+);
 </script>
