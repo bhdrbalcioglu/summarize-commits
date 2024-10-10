@@ -8,16 +8,18 @@ export const useCommitStore = defineStore("commit", {
     commitBundles: [] as CommitBundle[],
     isLoading: false,
     currentPage: 1,
-    itemsPerPage: 10,
+    perPage: 10, // Fixed number of commits per fetch
     totalCommits: 0,
-    isMore: false,
+    isMore: true, // Initially assume there are more commits
+    since: null as string | null,
+    until: null as string | null,
   }),
   actions: {
     setCommits(commits: Commit[]) {
       this.commits = commits;
     },
     addCommits(commits: Commit[]) {
-      this.commits.push(...commits);
+      this.commits = [...this.commits, ...commits];
     },
     setSelectedCommits(commitIds: string[]) {
       this.selectedCommits = commitIds;
@@ -31,22 +33,35 @@ export const useCommitStore = defineStore("commit", {
     setCurrentPage(page: number) {
       this.currentPage = page;
     },
+    incrementCurrentPage() {
+      this.currentPage += 1;
+    },
     setTotalCommits(total: number) {
       this.totalCommits = total;
     },
     setIsMore(isMore: boolean) {
       this.isMore = isMore;
-      this.itemsPerPage = this.itemsPerPage + 10;
     },
-
+    setSince(since: string | null) {
+      this.since = since;
+    },
+    setUntil(until: string | null) {
+      this.until = until;
+    },
+    resetPagination() {
+      this.currentPage = 1;
+      this.totalCommits = 0;
+      this.isMore = true;
+    },
     clearCommits() {
       this.commits = [];
       this.selectedCommits = [];
       this.commitBundles = [];
       this.currentPage = 1;
       this.totalCommits = 0;
-      this.itemsPerPage = 10;
-      this.isMore = false;
+      this.isMore = true;
+      this.since = null;
+      this.until = null;
     },
   },
 });

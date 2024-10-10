@@ -9,6 +9,9 @@ export const useAuthStore = defineStore("auth", {
     authProvider: null as null | "GitLab" | "GitHub",
     accessToken: null as null | string,
   }),
+  getters: {
+    isLoggedIn: (state) => !!state.accessToken, // Check if accessToken exists
+  },
   actions: {
     setAuthProvider(provider: "GitLab" | "GitHub" | null) {
       this.authProvider = provider;

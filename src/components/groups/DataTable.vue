@@ -72,6 +72,7 @@ const props = defineProps<{
   data: Group[];
 }>();
 
+
 const emit = defineEmits<{
   (e: "rowClick", rowData: Group): void;
 }>();

@@ -1,11 +1,18 @@
 import { Project } from "./project"; // Adjust the path as necessary
 
-export type OrderByOptions =
-  | "name"
-  | "path"
-  | "created_at"
-  | "updated_at"
-  | "last_activity_at"; // Define possible order by options
+export const OrderByOptions = {
+  ID: "id",
+  NAME: "name",
+  PATH: "path",
+  CREATED_AT: "created_at",
+  UPDATED_AT: "updated_at",
+  STAR_COUNT: "star_count",
+  LAST_ACTIVITY_AT: "last_activity_at",
+} as const;
+
+export type OrderByOptions = typeof OrderByOptions[keyof typeof OrderByOptions];
+
+export const DEFAULT_ORDER_BY: OrderByOptions = "created_at";
 
 export interface ProjectListState {
   projects: Project[];

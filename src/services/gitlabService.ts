@@ -104,13 +104,15 @@ export const fetchCommits = async (
   projectId: string,
   branch: string,
   page: number,
-  perPage: number
+  perPage: number,
+  since: string | null | undefined,
+  until: string | null | undefined
 ) => {
   const commitStore = useCommitStore();
   commitStore.setLoading(true);
 
   console.log(
-    `Fetching commits for project ${projectId}, branch ${branch}, page ${page}, perPage ${perPage}`
+    `Fetching commits for project ${projectId}, branch ${branch}, page ${page}, perPage ${perPage}, since ${since}, until ${until}`
   );
 
   try {
@@ -121,6 +123,8 @@ export const fetchCommits = async (
           ref_name: branch,
           per_page: perPage,
           page: page,
+          since: since,
+          until: until,
         },
       }
     );
@@ -130,27 +134,25 @@ export const fetchCommits = async (
     const totalCommits = parseInt(response.headers["x-total"] || "0");
     const nextPage = parseInt(response.headers["x-next-page"] || "0");
 
-    console.log(`Total commits: ${totalCommits}, Next page: ${nextPage}`);
+   
 
     commitStore.setIsMore(nextPage > page);
-
+    console.log(`Setting isMore to ${commitStore.isMore} for page ${page}`);
     if (page === 1) {
-      console.log(`Setting initial commits for page 1`);
       commitStore.setCommits(commits);
     } else {
-      console.log(`Adding ${commits.length} commits to existing list`);
+     
       commitStore.addCommits(commits);
+      console.log(
+        "here is the current commitStore.commits ",
+        commitStore.commits
+      );
     }
 
-    console.log(
-      `Updating commit store - Current page: ${page}, Total commits: ${totalCommits}`
-    );
+   
     commitStore.setCurrentPage(page);
     commitStore.setTotalCommits(totalCommits);
 
-    console.log(
-      `Returning ${commits.length} commits and total count of ${totalCommits}`
-    );
     return { commits, totalCommits };
   } catch (error) {
     console.error(`Error fetching commits for project ${projectId}:`, error);
