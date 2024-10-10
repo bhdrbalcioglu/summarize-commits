@@ -47,6 +47,7 @@ const fetchData = async () => {
 
     authStore.setAuthProvider("GitLab");
     authStore.setAccessToken(accessToken);
+    
 
     const userResponse = await axios.get("https://gitlab.com/api/v4/user", {
       headers: {

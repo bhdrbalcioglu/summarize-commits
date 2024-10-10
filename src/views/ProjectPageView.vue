@@ -57,7 +57,12 @@
             </div>
           </div>
 
-          <div class="flex items-center gap-x-2 w-full md:w-auto">
+          <div class="flex items-center gap-x-2 w-full md:w-auto mt-4 md:mt-0">
+            <CustomPopover
+              @select-last-30-days="handleLast30Days"
+              @select-last-90-days="handleLast90Days"
+              @select-custom-date="handleCustomDate"
+            ></CustomPopover>
             <select
               v-model="aiResponseStore.outputLanguage"
               @update:modelValue="setOutputLanguage"
@@ -69,6 +74,7 @@
               <option value="spanish">Spanish</option>
               <option value="german">German</option>
             </select>
+
             <button
               class="bg-green-500 text-white px-6 py-2 rounded-md hover:bg-green-600 shadow-md transition duration-200 flex items-center"
               @click="handleSelectedCommits"
@@ -78,20 +84,20 @@
             </button>
           </div>
         </div>
+
         <DataTable
-          :commits="commits as Commit[]"
-          :selectedCommits="selectedCommits"
+          :commits="commitStore.commits"
+          :selectedCommits="commitStore.selectedCommits"
           @toggleSelection="toggleCommitSelection"
         />
 
         <div class="mt-4 flex justify-center">
           <button
             v-if="commitStore.isMore"
-            @click="fetchCommits"
+            @click="loadMore"
             class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-indigo-600 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-200"
-            :disabled="isLoadingMore"
           >
-            {{ isLoadingMore ? "Loading..." : "Load More" }}
+            {{ commitStore.isLoading ? "Loading..." : "Load More" }}
           </button>
           <span v-else class="text-gray-500 text-sm">
             No more commits to load.
@@ -103,7 +109,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, onUnmounted, computed } from "vue";
+import { ref, onMounted, watch, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import "tailwindcss/tailwind.css";
 import { useProjectStore } from "../stores/project";
@@ -115,7 +121,7 @@ import { useAiResponseStore } from "../stores/aiResponse";
 import DataTable from "../components/commits/DataTable.vue";
 import type { Commit } from "../types/commit";
 import { Checkbox } from "../components/ui/checkbox/";
-
+import CustomPopover from "../components/commits/CustomPopover.vue";
 import { useCommitStore } from "../stores/commit";
 import {
   fetchProjectDetails as fetchProjectDetailsService,
@@ -129,15 +135,13 @@ const aiResponseStore = useAiResponseStore();
 
 const projectId = ref<string | null>(null);
 const branches = ref<Array<Record<string, any>>>([]);
-const selectedBranch = ref<string>("main");
-const commits = ref<Array<Record<string, any>>>([]);
+const selectedBranch = ref<string>("");
+// const commits = ref<Array<Record<string, any>>>([]);
 const selectedCommits = ref<Array<string>>([]);
 const isLoading = ref<boolean>(true);
 const errorMessage = ref<string | null>(null);
 const currentPage = ref<number>(1);
 
-const hasNextPage = ref(true);
-const isLoadingMore = ref(false);
 const commitStore = useCommitStore();
 const route = useRoute();
 const router = useRouter();
@@ -149,13 +153,28 @@ const setOutputLanguage = (language: string) => {
 const toggleAuthorIncluded = (value: boolean) => {
   aiResponseStore.setIsAuthorIncluded(value);
 };
-
-const handleDataFetching = async () => {
-  isLoading.value = true;
-  await fetchProjectDetails();
-  await fetchBranches();
+const loadMore = async () => {
+  if (!commitStore.isMore || commitStore.isLoading) return;
+  console.log("Loading more commits");
+  commitStore.incrementCurrentPage();
+  console.log("Current page set to:", commitStore.currentPage);
   await fetchCommits();
-  isLoading.value = false;
+};
+
+const initializeData = async () => {
+  isLoading.value = true;
+  try {
+    await fetchProjectDetails();
+    await fetchBranches();
+    if (branches.value.length > 0) {
+      selectedBranch.value = branches.value[0].name;
+    }
+    await fetchCommits();
+  } catch (error) {
+    errorMessage.value = "An error occurred while initializing data.";
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 const fetchProjectDetails = async () => {
@@ -176,7 +195,9 @@ const fetchBranches = async () => {
         projectStore.projectId.toString()
       );
       branches.value = branchesData;
-      selectedBranch.value = branches.value[0]?.name || "";
+      if (branches.value.length > 0) {
+        selectedBranch.value = branches.value[0].name;
+      }
     }
   } catch (error) {
     errorMessage.value = "Failed to fetch branches";
@@ -185,7 +206,7 @@ const fetchBranches = async () => {
 
 const fetchCommits = async () => {
   try {
-    isLoadingMore.value = true;
+    isLoading.value = true;
 
     if (!selectedBranch.value) {
       await fetchBranches();
@@ -202,38 +223,29 @@ const fetchCommits = async () => {
       projectStore.projectId.toString(),
       selectedBranch.value,
       commitStore.currentPage,
-      commitStore.itemsPerPage
+      commitStore.perPage,
+      commitStore.since,
+      commitStore.until
     );
-
-    if (currentPage.value === 1) {
-      commits.value = fetchedCommits;
-    } else {
-      commits.value = [...commits.value, ...fetchedCommits];
-    }
-
-    hasNextPage.value = commits.value.length < totalCommits;
-
-    if (hasNextPage.value) {
-      currentPage.value++;
-    }
+    console.log("Fetched Commits:", fetchedCommits);
   } catch (error) {
     errorMessage.value = "Failed to fetch commits";
   } finally {
-    isLoadingMore.value = false;
+    isLoading.value = false;
   }
 };
 
 const toggleCommitSelection = (commitId: string) => {
-  if (selectedCommits.value.includes(commitId)) {
-    selectedCommits.value = selectedCommits.value.filter(
-      (id) => id !== commitId
+  if (commitStore.selectedCommits.includes(commitId)) {
+    commitStore.setSelectedCommits(
+      commitStore.selectedCommits.filter((id) => id !== commitId)
     );
   } else {
-    selectedCommits.value.push(commitId);
+    commitStore.setSelectedCommits([...commitStore.selectedCommits, commitId]);
   }
 };
 const handleSelectedCommits = async () => {
-  if (selectedCommits.value.length > 0 && projectStore.projectId) {
+  if (commitStore.selectedCommits.length > 0 && projectStore.projectId) {
     try {
       router.push({
         name: "CommitSummaries",
@@ -242,7 +254,7 @@ const handleSelectedCommits = async () => {
 
       const { commits: commitBundles } = await getCommitsBundle(
         projectStore.projectId.toString(),
-        selectedCommits.value
+        commitStore.selectedCommits
       );
 
       const commitMessage = await generateCommitMessage(commitBundles);
@@ -251,24 +263,59 @@ const handleSelectedCommits = async () => {
     }
   } else {
     alert("No commits selected or project ID is missing");
+    console.log(commitStore.selectedCommits, " selectedCommits.value");
+    console.log(projectStore.projectId, " projectStore.projectId");
   }
+};
+
+const handleLast30Days = () => {
+  console.log("Selecting commits from the last 30 days");
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  commitStore.setSince(thirtyDaysAgo.toISOString());
+  commitStore.setUntil(new Date().toISOString());
+  console.log(commitStore.since, " commitStore.since");
+  console.log(commitStore.until, " commitStore.until");
+  fetchCommits();
+};
+
+const handleLast90Days = () => {
+  console.log("Selecting commits from the last 90 days");
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+  commitStore.setSince(ninetyDaysAgo.toISOString());
+  console.log(commitStore.since, " commitStore.since");
+  commitStore.setUntil(new Date().toISOString());
+  console.log(commitStore.until, " commitStore.until");
+  fetchCommits();
+};
+
+const handleCustomDate = (date: Date) => {
+  // Implement the logic for selecting commits from the custom date
+  console.log("Selecting commits from custom date:", date);
 };
 
 onMounted(() => {
   projectId.value = route.params.id as string;
-  handleDataFetching();
+  initializeData();
 });
 onUnmounted(() => {
   console.log("Unmounting ProjectPageView");
   commitStore.clearCommits();
 });
-
-watch(selectedBranch, () => {
-  commits.value = [];
-  currentPage.value = 1;
-
-  if (currentPage.value > 1) {
-    fetchCommits();
+watch(
+  () => commitStore.commits,
+  (newCommits) => {
+    console.log("Commit Store Updated:", newCommits);
   }
+);
+watch(selectedBranch, () => {
+  commitStore.clearCommits();
+  commitStore.resetPagination();
+  fetchCommits();
+});
+
+watch(commitStore.selectedCommits, () => {
+  console.log("Selected Commits:", commitStore.selectedCommits);
 });
 </script>

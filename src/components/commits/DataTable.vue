@@ -20,7 +20,7 @@
         <template v-if="table.getFilteredRowModel().rows.length">
           <TableRow
             v-for="row in table.getFilteredRowModel().rows"
-            :key="row.id"
+            :key="`${row.id}-${row.original.id}`"
             :class="{
               'bg-blue-100 border-l-4 border-blue-500 shadow-md':
                 row.getIsSelected(),
@@ -82,6 +82,7 @@ const props = defineProps<{
   commits: Commit[];
   selectedCommits: string[];
 }>();
+
 const columnFilters = ref<ColumnFiltersState>([]);
 const selectedAuthors = ref<string[]>([]);
 
@@ -103,55 +104,55 @@ const selectedCommitIds = computed(() =>
     .map(([index]) => props.commits[parseInt(index)].id)
 );
 
-const table = useVueTable({
-  get data() {
-    return props.commits;
-  },
-  columns: columnsWithFilters,
-  state: {
-    get sorting() {
-      return sorting.value;
+const table = computed(() =>
+  useVueTable({
+    get data() {
+      return props.commits;
     },
-    get rowSelection() {
-      return rowSelection.value;
+    columns: columnsWithFilters,
+    state: {
+      get sorting() {
+        return sorting.value;
+      },
+      get rowSelection() {
+        return rowSelection.value;
+      },
+      get columnFilters() {
+        return columnFilters.value;
+      },
     },
-    get columnFilters() {
-      return columnFilters.value;
+    onSortingChange: (updaterOrValue) => {
+      sorting.value =
+        typeof updaterOrValue === "function"
+          ? updaterOrValue(sorting.value)
+          : updaterOrValue;
     },
-  },
+    onRowSelectionChange: (updaterOrValue) => {
+      const newSelection: Record<number, boolean> =
+        typeof updaterOrValue === "function"
+          ? updaterOrValue(rowSelection.value as Record<number, boolean>)
+          : updaterOrValue;
 
-  onSortingChange: (updaterOrValue) => {
-    sorting.value =
-      typeof updaterOrValue === "function"
-        ? updaterOrValue(sorting.value)
-        : updaterOrValue;
-  },
-  onRowSelectionChange: (updaterOrValue) => {
-    const newSelection: Record<number, boolean> =
-      typeof updaterOrValue === "function"
-        ? updaterOrValue(rowSelection.value as Record<number, boolean>)
-        : updaterOrValue;
+      const changedIndex = Object.keys(newSelection).find((index) => {
+        const numIndex = Number(index);
+        return (
+          newSelection[numIndex as keyof typeof newSelection] !==
+          rowSelection.value[numIndex as keyof typeof rowSelection.value]
+        );
+      });
 
-    const changedIndex = Object.keys(newSelection).find((index) => {
-      const numIndex = Number(index);
-      return (
-        newSelection[numIndex as keyof typeof newSelection] !==
-        rowSelection.value[numIndex as keyof typeof rowSelection.value]
-      );
-    });
+      if (changedIndex !== undefined) {
+        const commitId = props.commits[Number(changedIndex)].id;
+        emit("toggleSelection", commitId);
+      }
 
-    if (changedIndex !== undefined) {
-      const commitId = props.commits[Number(changedIndex)].id;
-      emit("toggleSelection", commitId);
-    }
-
-    rowSelection.value = newSelection;
-  },
-  getCoreRowModel: getCoreRowModel(),
-  getSortedRowModel: getSortedRowModel(),
-  getFilteredRowModel: getFilteredRowModel(),
-});
-
+      rowSelection.value = newSelection;
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+  })
+);
 watch(
   () => props.selectedCommits,
   (newSelectedCommits) => {
@@ -161,6 +162,19 @@ watch(
     }, {} as Record<number, boolean>);
   },
   { immediate: true }
+);
+watch(
+  () => props.commits,
+  (newCommits) => {
+    console.log("All commits updated", newCommits);
+    // Reset row selection when commits change
+    rowSelection.value = newCommits.reduce((acc, _, index) => {
+      acc[index] = props.selectedCommits.includes(newCommits[index].id);
+      return acc;
+    }, {} as Record<number, boolean>);
+    // Optionally, you can perform additional actions here when commits change
+  },
+  { deep: true }
 );
 
 watch(selectedCommitIds, (newSelectedIds) => {
@@ -184,11 +198,10 @@ watch(selectedAuthors, (newAuthors) => {
     },
   ];
 });
-
 watch(
-  () => table.getState().columnFilters,
+  () => table.value.getState().columnFilters,
   (newFilters) => {
-    console.log("Column filters updated:", newFilters);
+    console.log("Column filters updated DataTable.vue:", newFilters);
   },
   { deep: true }
 );

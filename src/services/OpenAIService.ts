@@ -52,10 +52,6 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function emptyString(): string {
-  return "";
-}
-
 // Batch creation function for commits
 function createCommitBatches(commitBundles: any[]): any[][] {
   const batches = [];
@@ -77,6 +73,7 @@ function createCommitBatches(commitBundles: any[]): any[][] {
 
   if (currentBatch.length > 0) {
     batches.push(currentBatch);
+ 
   }
 
   return batches;
@@ -85,12 +82,11 @@ function createCommitBatches(commitBundles: any[]): any[][] {
 // Analyze a single batch of commits
 async function analyzeBatch(batch: any[], retries = 3): Promise<any[]> {
   try {
-    const prompt = `You are an expert software engineer and project analyst. Your task is to analyze a set of code changes (diffs) from a software repository. These changes include file names and the actual code diffs.
-
-For each code change, please:
-
+   
+    const prompt = `You are an expert software engineer and project analyst. Your task is to analyze a set of code changes (diffs) from a software repository. 
+      These changes include file names and the actual code diffs.
+    For each code change, please:
 1. **Describe the Change**: Provide a brief summary of what was changed in the code, focusing on the functionality affected.
-
 2. **Categorize the Change**: Determine whether the change is a:
    - **Bug Fix**
    - **Improvement**
@@ -98,14 +94,10 @@ For each code change, please:
    - **Refactoring**
    - **Documentation Update**
    - **Other** (specify)
-
 3. **Identify the Affected Areas**: Mention the parts of the application or modules that are affected by the change.
-
 4. **Infer Programming Language or Framework**: If possible, infer and mention the programming language or framework used based on the file extensions and code syntax.
-
 Always add the Commit Message at the top of each commit bundle. This will ensure the user can understand the changes in each commit.
 For each code change, please provide the following in JSON format:
-
 {
   "commitMessage": "Commit message here",
   "commitID": "Commit ID here",
@@ -115,12 +107,8 @@ For each code change, please provide the following in JSON format:
   "affectedAreas": ["List of affected modules or areas"],
   "languageOrFramework": "Inferred programming language or framework"
 }
-
 Please output the results as a JSON array without additional text. This is really important because the next step will be to parse this JSON array.
-
 Please do not include any additional text or formatting.
-
-
 **Here are the code changes to analyze:**
 
 ${JSON.stringify(batch)}`;
@@ -143,7 +131,9 @@ ${JSON.stringify(batch)}`;
 
     // Parse the JSON output
     const analysisResult = JSON.parse(analysisResultText);
-    return analysisResult; // This should be an array of analysis objects
+
+    return analysisResult;
+    // This should be an array of analysis objects
   } catch (error) {
     if (retries > 0) {
       await wait(2 ** (3 - retries) * 1000); // Exponential backoff

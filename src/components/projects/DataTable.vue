@@ -19,9 +19,9 @@
       </TableHeader>
       <!-- Table Body -->
       <TableBody>
-        <template v-if="table.getRowModel().rows.length">
+        <template v-if="table.getFilteredRowModel().rows.length">
           <TableRow
-            v-for="row in table.getRowModel().rows"
+            v-for="row in table.getFilteredRowModel().rows"
             :key="row.id"
             @click="handleRowClick(row)"
             class="cursor-pointer hover:bg-gray-100"
@@ -47,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { computed } from "vue";
 import { OrderByOptions } from "../../types/projectList";
 import {
   useVueTable,

@@ -13,10 +13,10 @@ export interface Commit {
 }
 
 export interface CommitDiff {
-  old_path: string;
-  new_path: string;
-  a_mode: string;
-  b_mode: string;
+  old_path?: string;
+  new_path?: string;
+  a_mode?: string;
+  b_mode?: string;
   diff: string;
   new_file: boolean;
   renamed_file: boolean;
@@ -32,5 +32,3 @@ export interface CommitBundle {
     diff: string;
   }[];
 }
-
-
