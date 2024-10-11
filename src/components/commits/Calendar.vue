@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type Ref, ref, watch } from "vue";
+import { type Ref, ref, watch, defineEmits } from "vue";
 
 import {
   Calendar as CalendarIcon,
@@ -30,13 +30,18 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/components/lib/utils";
-const today = new CalendarDate(2024, 10, 10);
-const ninetyDaysAgo = today.subtract({ days: 90 });
+
+const emit = defineEmits(["selectDate", "selectCustomDate", "close"]);
+
+const today = new CalendarDate(2024, 10, 12);
+const fiveDaysAgo = today.subtract({ days: 5 });
 
 const value = ref({
-  start: ninetyDaysAgo,
+  start: fiveDaysAgo,
   end: today,
 }) as Ref<DateRange>;
+
+const hasCustomRange = ref(false);
 
 const locale = ref("en-US");
 const formatter = useDateFormatter(locale.value);
@@ -44,6 +49,24 @@ const formatter = useDateFormatter(locale.value);
 const placeholder = ref(value.value.start) as Ref<DateValue>;
 const secondMonthPlaceholder = ref(value.value.end) as Ref<DateValue>;
 
+const isDateValid = (date: DateValue | undefined): date is DateValue => {
+  return date !== undefined;
+};
+const formatDate = (date: DateValue | undefined) => {
+  return date ? formatter.custom(toDate(date), { dateStyle: "medium" }) : "";
+};
+
+const applyDateRange = () => {
+  hasCustomRange.value = true;
+  if (value.value.start && value.value.end) {
+    emit(
+      "selectCustomDate",
+      toDate(value.value.start),
+      toDate(value.value.end)
+    );
+    emit("close");
+  }
+};
 const firstMonth = ref(
   createMonth({
     dateObj: placeholder.value,
@@ -105,35 +128,19 @@ watch(secondMonthPlaceholder, (_secondMonthPlaceholder) => {
         :class="
           cn(
             'w-[280px] justify-start text-left font-normal',
-            !value && 'text-muted-foreground'
+            !hasCustomRange && 'text-muted-foreground'
           )
         "
       >
         <CalendarIcon class="mr-2 h-4 w-4" />
-        <template v-if="value.start">
-          <template v-if="value.end">
-            {{
-              formatter.custom(toDate(value.start), {
-                dateStyle: "medium",
-              })
-            }}
-            -
-            {{
-              formatter.custom(toDate(value.end), {
-                dateStyle: "medium",
-              })
-            }}
-          </template>
-
-          <template v-else>
-            {{
-              formatter.custom(toDate(value.start), {
-                dateStyle: "medium",
-              })
-            }}
-          </template>
+        <template
+          v-if="
+            hasCustomRange && isDateValid(value.start) && isDateValid(value.end)
+          "
+        >
+          {{ formatDate(value.start) }} - {{ formatDate(value.end) }}
         </template>
-        <template v-else> Pick a date </template>
+        <template v-else>Pick a date</template>
       </Button>
     </PopoverTrigger>
     <PopoverContent class="w-auto p-0">
@@ -267,6 +274,14 @@ watch(secondMonthPlaceholder, (_secondMonthPlaceholder) => {
               </RangeCalendarGridBody>
             </RangeCalendarGrid>
           </div>
+        </div>
+        <div class="mt-4 text-right">
+          <Button
+            @click="applyDateRange"
+            :disabled="!value.start || !value.end"
+          >
+            Apply
+          </Button>
         </div>
       </RangeCalendarRoot>
     </PopoverContent>

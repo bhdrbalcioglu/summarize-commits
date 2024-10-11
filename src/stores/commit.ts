@@ -32,6 +32,9 @@ export const useCommitStore = defineStore("commit", {
     setSelectedBranch(branch: string) {
       this.selectedBranch = branch;
     },
+    setPerPage(perPage: number) {
+      this.perPage = perPage;
+    },
     setCommitBundles(bundles: CommitBundle[]) {
       this.commitBundles = bundles;
     },
@@ -70,6 +73,7 @@ export const useCommitStore = defineStore("commit", {
       this.isMore = true;
       this.since = null;
       this.until = null;
+      this.perPage = 10;
     },
   },
 });

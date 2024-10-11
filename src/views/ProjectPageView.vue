@@ -117,16 +117,9 @@ import {
 
 const projectStore = useProjectStore();
 const aiResponseStore = useAiResponseStore();
-
 const projectId = ref<string | null>(null);
-const branches = ref<Array<Record<string, any>>>([]);
-const selectedBranch = ref<string>("");
-// const commits = ref<Array<Record<string, any>>>([]);
-const selectedCommits = ref<Array<string>>([]);
 const isLoading = ref<boolean>(true);
 const errorMessage = ref<string | null>(null);
-const currentPage = ref<number>(1);
-
 const commitStore = useCommitStore();
 const route = useRoute();
 const router = useRouter();
@@ -202,7 +195,7 @@ const fetchCommits = async () => {
     if (!projectStore.projectId) {
       throw new Error("No project ID available");
     }
-    console.log(commitStore.selectedBranch, " commitStore.selectedBranch");
+
     const { commits: fetchedCommits, totalCommits } = await fetchCommitsService(
       projectStore.projectId.toString(),
       commitStore.selectedBranch,
@@ -253,30 +246,29 @@ const handleSelectedCommits = async () => {
 };
 
 const handleLast30Days = () => {
-  console.log("Selecting commits from the last 30 days");
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   commitStore.setSince(thirtyDaysAgo.toISOString());
   commitStore.setUntil(new Date().toISOString());
-  console.log(commitStore.since, " commitStore.since");
-  console.log(commitStore.until, " commitStore.until");
+  commitStore.setPerPage(50);
   fetchCommits();
 };
 
 const handleLast90Days = () => {
-  console.log("Selecting commits from the last 90 days");
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
   commitStore.setSince(ninetyDaysAgo.toISOString());
-  console.log(commitStore.since, " commitStore.since");
   commitStore.setUntil(new Date().toISOString());
-  console.log(commitStore.until, " commitStore.until");
+  commitStore.setPerPage(100);
   fetchCommits();
 };
 
-const handleCustomDate = (date: Date) => {
-  // Implement the logic for selecting commits from the custom date
-  console.log("Selecting commits from custom date:", date);
+const handleCustomDate = (date1: Date, date2: Date) => {
+  console.log("Selecting commits from custom date:", date1, date2);
+  commitStore.setSince(date1.toISOString());
+  commitStore.setUntil(date2.toISOString());
+  commitStore.setPerPage(100);
+  fetchCommits();
 };
 
 onMounted(() => {

@@ -12,6 +12,19 @@ const emit = defineEmits([
   "selectLast90Days",
   "selectCustomDate",
 ]);
+
+
+const handleLast30Days = () => {
+  emit("selectLast30Days");
+};
+
+const handleLast90Days = () => {
+  emit("selectLast90Days");
+};
+
+const handleCustomDate = (date1: Date, date2: Date) => {
+  emit("selectCustomDate", date1, date2);
+};
 </script>
 
 <template>
@@ -24,25 +37,13 @@ const emit = defineEmits([
     </PopoverTrigger>
     <PopoverContent class="w-100 p-0">
       <div class="flex flex-col space-y-1">
-        <Button
-          variant="ghost"
-          class="justify-start"
-          @click="emit('selectLast30Days')"
-        >
+        <Button variant="ghost" class="justify-start" @click="handleLast30Days">
           Select Commits on the last 30 days
         </Button>
-        <Button
-          variant="ghost"
-          class="justify-start"
-          @click="emit('selectLast90Days')"
-        >
+        <Button variant="ghost" class="justify-start" @click="handleLast90Days">
           Select Commits on the last 90 days
         </Button>
-        <Calendar
-          @select-date="
-            (date1, date2) => emit('selectCustomDate', date1, date2)
-          "
-        />
+        <Calendar @select-custom-date="handleCustomDate" />
       </div>
     </PopoverContent>
   </Popover>
