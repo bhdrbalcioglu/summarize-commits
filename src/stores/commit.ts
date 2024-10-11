@@ -1,9 +1,11 @@
 import { defineStore } from "pinia";
-import { Commit, CommitBundle } from "../types/commit";
+import { Commit, CommitBundle, Branch } from "../types/commit";
 
 export const useCommitStore = defineStore("commit", {
   state: () => ({
     commits: [] as Commit[],
+    branches: [] as Branch[],
+    selectedBranch: "" as string,
     selectedCommits: [] as string[],
     commitBundles: [] as CommitBundle[],
     isLoading: false,
@@ -23,6 +25,12 @@ export const useCommitStore = defineStore("commit", {
     },
     setSelectedCommits(commitIds: string[]) {
       this.selectedCommits = commitIds;
+    },
+    setBranches(branches: Branch[]) {
+      this.branches = branches;
+    },
+    setSelectedBranch(branch: string) {
+      this.selectedBranch = branch;
     },
     setCommitBundles(bundles: CommitBundle[]) {
       this.commitBundles = bundles;

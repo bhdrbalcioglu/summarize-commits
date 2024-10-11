@@ -11,6 +11,10 @@ export interface Commit {
   parent_ids: string[];
   web_url: string;
 }
+export interface Branch {
+  name: string;
+  default: boolean;
+}
 
 export interface CommitDiff {
   old_path?: string;

@@ -23,22 +23,7 @@
           class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 space-y-4 md:space-y-0"
         >
           <div class="w-full md:w-1/3">
-            <label for="branches" class="block text-gray-700 font-medium mb-2">
-              Branches:
-            </label>
-            <select
-              v-model="selectedBranch"
-              id="branches"
-              class="w-full bg-gray-100 text-gray-700 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-200"
-            >
-              <option
-                v-for="branch in branches"
-                :key="branch.name"
-                :value="branch.name"
-              >
-                {{ branch.name }}
-              </option>
-            </select>
+            <BranchSelector />
 
             <div class="flex items-center gap-x-2 pt-6 w-full md:w-auto">
               <Checkbox id="terms1" @update:checked="toggleAuthorIncluded" />
@@ -119,8 +104,8 @@ import { generateCommitMessage } from "../services/OpenAIService";
 import ProjectCard from "../components/ProjectCard.vue";
 import { useAiResponseStore } from "../stores/aiResponse";
 import DataTable from "../components/commits/DataTable.vue";
-import type { Commit } from "../types/commit";
 import { Checkbox } from "../components/ui/checkbox/";
+import BranchSelector from "../components/commits/BranchSelector.vue";
 import CustomPopover from "../components/commits/CustomPopover.vue";
 import { useCommitStore } from "../stores/commit";
 import {
@@ -166,9 +151,7 @@ const initializeData = async () => {
   try {
     await fetchProjectDetails();
     await fetchBranches();
-    if (branches.value.length > 0) {
-      selectedBranch.value = branches.value[0].name;
-    }
+
     await fetchCommits();
   } catch (error) {
     errorMessage.value = "An error occurred while initializing data.";
@@ -194,9 +177,10 @@ const fetchBranches = async () => {
       const branchesData = await fetchBranchesService(
         projectStore.projectId.toString()
       );
-      branches.value = branchesData;
-      if (branches.value.length > 0) {
-        selectedBranch.value = branches.value[0].name;
+      commitStore.setBranches(branchesData);
+      if (commitStore.branches.length > 0) {
+        commitStore.setSelectedBranch(commitStore.branches[0].name);
+        console.log("SELECTED BRANCH SET TO: ", commitStore.selectedBranch);
       }
     }
   } catch (error) {
@@ -208,9 +192,9 @@ const fetchCommits = async () => {
   try {
     isLoading.value = true;
 
-    if (!selectedBranch.value) {
+    if (!commitStore.selectedBranch) {
       await fetchBranches();
-      if (!selectedBranch.value) {
+      if (!commitStore.selectedBranch) {
         throw new Error("No branch selected");
       }
     }
@@ -218,10 +202,10 @@ const fetchCommits = async () => {
     if (!projectStore.projectId) {
       throw new Error("No project ID available");
     }
-
+    console.log(commitStore.selectedBranch, " commitStore.selectedBranch");
     const { commits: fetchedCommits, totalCommits } = await fetchCommitsService(
       projectStore.projectId.toString(),
-      selectedBranch.value,
+      commitStore.selectedBranch,
       commitStore.currentPage,
       commitStore.perPage,
       commitStore.since,
@@ -309,11 +293,14 @@ watch(
     console.log("Commit Store Updated:", newCommits);
   }
 );
-watch(selectedBranch, () => {
-  commitStore.clearCommits();
-  commitStore.resetPagination();
-  fetchCommits();
-});
+watch(
+  () => commitStore.selectedBranch,
+  () => {
+    commitStore.clearCommits();
+    commitStore.resetPagination();
+    fetchCommits();
+  }
+);
 
 watch(commitStore.selectedCommits, () => {
   console.log("Selected Commits:", commitStore.selectedCommits);

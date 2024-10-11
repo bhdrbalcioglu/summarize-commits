@@ -140,6 +140,7 @@ export const fetchCommits = async (
     console.log(`Setting isMore to ${commitStore.isMore} for page ${page}`);
     if (page === 1) {
       commitStore.setCommits(commits);
+      
     } else {
      
       commitStore.addCommits(commits);
