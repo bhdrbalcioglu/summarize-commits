@@ -3,19 +3,25 @@
 import type { ColumnDef } from "@tanstack/vue-table";
 import { h } from "vue";
 import type { Group } from "../../types/group";
-import { ArrowUpDown, ChevronDown } from "lucide-vue-next";
+import { ArrowUpDown } from "lucide-vue-next";
 import { Button } from "../../components/ui/button";
 
 export const columns: ColumnDef<Group>[] = [
   {
     accessorKey: "avatar_url",
     header: "Logo",
-    cell: ({ row }) =>
-      h("img", {
-        src: row.getValue("avatar_url"),
-        alt: "Logo",
-        class: "w-12 h-12 rounded-full ",
-      }),
+    cell: ({ row }) => {
+      const avatarUrl = row.getValue("avatar_url");
+      return avatarUrl
+        ? h("img", {
+            src: avatarUrl,
+            alt: "Logo",
+            class: "w-12 h-12 rounded-full",
+          })
+        : h("i", {
+            class: "fa-solid fa-share-nodes text-4xl",
+          });
+    },
   },
   {
     accessorKey: "id",
