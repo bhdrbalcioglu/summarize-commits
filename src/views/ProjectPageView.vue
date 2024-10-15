@@ -133,9 +133,7 @@ const toggleAuthorIncluded = (value: boolean) => {
 };
 const loadMore = async () => {
   if (!commitStore.isMore || commitStore.isLoading) return;
-  console.log("Loading more commits");
   commitStore.incrementCurrentPage();
-  console.log("Current page set to:", commitStore.currentPage);
   await fetchCommits();
 };
 
@@ -173,7 +171,6 @@ const fetchBranches = async () => {
       commitStore.setBranches(branchesData);
       if (commitStore.branches.length > 0) {
         commitStore.setSelectedBranch(commitStore.branches[0].name);
-        console.log("SELECTED BRANCH SET TO: ", commitStore.selectedBranch);
       }
     }
   } catch (error) {
@@ -204,7 +201,6 @@ const fetchCommits = async () => {
       commitStore.since,
       commitStore.until
     );
-    console.log("Fetched Commits:", fetchedCommits);
   } catch (error) {
     errorMessage.value = "Failed to fetch commits";
   } finally {
@@ -240,8 +236,6 @@ const handleSelectedCommits = async () => {
     }
   } else {
     alert("No commits selected or project ID is missing");
-    console.log(commitStore.selectedCommits, " selectedCommits.value");
-    console.log(projectStore.projectId, " projectStore.projectId");
   }
 };
 
@@ -264,7 +258,6 @@ const handleLast90Days = () => {
 };
 
 const handleCustomDate = (date1: Date, date2: Date) => {
-  console.log("Selecting commits from custom date:", date1, date2);
   commitStore.setSince(date1.toISOString());
   commitStore.setUntil(date2.toISOString());
   commitStore.setPerPage(100);
@@ -276,15 +269,9 @@ onMounted(() => {
   initializeData();
 });
 onUnmounted(() => {
-  console.log("Unmounting ProjectPageView");
   commitStore.clearCommits();
 });
-watch(
-  () => commitStore.commits,
-  (newCommits) => {
-    console.log("Commit Store Updated:", newCommits);
-  }
-);
+
 watch(
   () => commitStore.selectedBranch,
   () => {
@@ -293,8 +280,4 @@ watch(
     fetchCommits();
   }
 );
-
-watch(commitStore.selectedCommits, () => {
-  console.log("Selected Commits:", commitStore.selectedCommits);
-});
 </script>

@@ -54,7 +54,8 @@
               >Click the 'Generate Notes' button to create concise update notes
               for the selected commits. The notes are generated using OpenAI's
               ChatGPT, ensuring they are informative and easy to understand.
-              Review the generated notes before copying them.</AccordionContent
+              Review and edit the generated notes before copying
+              them.</AccordionContent
             >
           </AccordionItem>
         </Accordion>

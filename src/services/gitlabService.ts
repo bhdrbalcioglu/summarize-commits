@@ -134,23 +134,14 @@ export const fetchCommits = async (
     const totalCommits = parseInt(response.headers["x-total"] || "0");
     const nextPage = parseInt(response.headers["x-next-page"] || "0");
 
-   
-
     commitStore.setIsMore(nextPage > page);
-    console.log(`Setting isMore to ${commitStore.isMore} for page ${page}`);
+
     if (page === 1) {
       commitStore.setCommits(commits);
-      
     } else {
-     
       commitStore.addCommits(commits);
-      console.log(
-        "here is the current commitStore.commits ",
-        commitStore.commits
-      );
     }
 
-   
     commitStore.setCurrentPage(page);
     commitStore.setTotalCommits(totalCommits);
 
@@ -159,7 +150,6 @@ export const fetchCommits = async (
     console.error(`Error fetching commits for project ${projectId}:`, error);
     throw error;
   } finally {
-    console.log(`Finished fetching commits, setting loading state to false`);
     commitStore.setLoading(false);
   }
 };

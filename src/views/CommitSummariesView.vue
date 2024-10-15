@@ -137,7 +137,7 @@ onUnmounted(() => {
 </script>
 
 <style>
-/* Add the fade-in animation */
+
 @keyframes fade-in {
   from {
     opacity: 0;

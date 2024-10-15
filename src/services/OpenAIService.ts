@@ -73,7 +73,6 @@ function createCommitBatches(commitBundles: any[]): any[][] {
 
   if (currentBatch.length > 0) {
     batches.push(currentBatch);
- 
   }
 
   return batches;
@@ -82,7 +81,6 @@ function createCommitBatches(commitBundles: any[]): any[][] {
 // Analyze a single batch of commits
 async function analyzeBatch(batch: any[], retries = 3): Promise<any[]> {
   try {
-   
     const prompt = `You are an expert software engineer and project analyst. Your task is to analyze a set of code changes (diffs) from a software repository. 
       These changes include file names and the actual code diffs.
     For each code change, please:
