@@ -1,10 +1,7 @@
 <template>
   <div class="bg-gray-100 min-h-screen flex">
     <div class="w-1/4 bg-gray-50 border-r border-gray-200 p-4">
-      <ProjectCard
-        :project="projectStore"
-        :isLoading="projectStore.isLoading"
-      />
+      <ProjectCard :project="projectStore" :isLoading="projectStore.isLoading" />
     </div>
     <div class="flex-1 p-8 mx-4 px-5 overflow-hidden sm:px-6 lg:px-8">
       <div class="bg-white shadow-lg rounded-lg p-8 max-w-full">
@@ -14,35 +11,16 @@
             AI Generated Summary
           </h1>
         </div>
-        <div
-          class="ai-response relative bg-gray-50 p-4 rounded-md shadow-inner"
-        >
-          <div
-            v-if="isLoadingAIResponse"
-            class="flex items-center justify-center py-10"
-          >
+        <div class="ai-response relative bg-gray-50 p-4 rounded-md shadow-inner">
+          <div v-if="isLoadingAIResponse" class="flex items-center justify-center py-10">
             <i class="fas fa-spinner fa-spin text-3xl text-green-500"></i>
           </div>
-          <Textarea
-            v-else
-            v-model="displayedText"
-            class="font-mono text-lg leading-relaxed"
-            :style="{ minHeight: '200px' }"
-          />
+          <Textarea v-else v-model="displayedText" class="font-mono text-lg leading-relaxed" :style="{ minHeight: '200px' }" />
         </div>
-        <button
-          v-show="displayedText"
-          class="copy-button mt-6 px-5 py-3 bg-blue-600 text-white rounded-md flex items-center justify-center relative hover:bg-blue-700 transition duration-200"
-          @click="copyToClipboard"
-        >
+        <button v-show="displayedText" class="copy-button mt-6 px-5 py-3 bg-blue-600 text-white rounded-md flex items-center justify-center relative hover:bg-blue-700 transition duration-200" @click="copyToClipboard">
           <i class="fas fa-copy mr-3"></i>
           Copy
-          <div
-            v-if="copiedMessageVisible"
-            class="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 bg-green-500 text-white text-sm rounded px-3 py-1 shadow-lg opacity-0 animate-fade-in"
-          >
-            <i class="fas fa-check mr-2"></i> Copied to Clipboard
-          </div>
+          <div v-if="copiedMessageVisible" class="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 bg-green-500 text-white text-sm rounded px-3 py-1 shadow-lg opacity-0 animate-fade-in"><i class="fas fa-check mr-2"></i> Copied to Clipboard</div>
         </button>
       </div>
     </div>
@@ -50,94 +28,93 @@
 </template>
 
 <script setup lang="ts">
-import { useProjectStore } from "../stores/project";
-import { useAiResponseStore } from "../stores/aiResponse";
-import { ref, watch, onUnmounted } from "vue";
-import ProjectCard from "../components/ProjectCard.vue";
-import { Textarea } from "../components/ui/textarea";
+import { useProjectStore } from '../stores/project'
+import { useAiResponseStore } from '../stores/aiResponse'
+import { ref, watch, onUnmounted } from 'vue'
+import ProjectCard from '../components/ProjectCard.vue'
+import { Textarea } from '../components/ui/textarea'
 
-const projectStore = useProjectStore();
-const aiResponseStore = useAiResponseStore();
-const copiedMessageVisible = ref(false);
-const isLoadingAIResponse = ref(aiResponseStore.isLoadingSecond);
+const projectStore = useProjectStore()
+const aiResponseStore = useAiResponseStore()
+const copiedMessageVisible = ref(false)
+const isLoadingAIResponse = ref(aiResponseStore.isLoadingSecond)
 
-const displayedText = ref("");
-let typewriterInterval: number | null = null;
+const displayedText = ref('')
+let typewriterInterval: number | null = null
 
 const copyToClipboard = () => {
-  const textToCopy = displayedText.value;
+  const textToCopy = displayedText.value
   navigator.clipboard
     .writeText(textToCopy)
     .then(() => {
-      console.log("Text copied to clipboard");
-      copiedMessageVisible.value = true;
+      console.log('Text copied to clipboard')
+      copiedMessageVisible.value = true
       setTimeout(() => {
-        copiedMessageVisible.value = false;
-      }, 2000);
+        copiedMessageVisible.value = false
+      }, 2000)
     })
     .catch((err) => {
-      console.error("Failed to copy text: ", err);
-    });
-};
+      console.error('Failed to copy text: ', err)
+    })
+}
 
 const typeWriterEffect = (text: string) => {
   if (typewriterInterval !== null) {
-    clearInterval(typewriterInterval);
-    typewriterInterval = null;
+    clearInterval(typewriterInterval)
+    typewriterInterval = null
   }
 
-  displayedText.value = "";
+  displayedText.value = ''
 
-  let index = 0;
-  const typingSpeed = 20;
+  let index = 0
+  const typingSpeed = 20
 
   typewriterInterval = window.setInterval(() => {
     if (index < text.length) {
-      displayedText.value += text.charAt(index);
-      index++;
+      displayedText.value += text.charAt(index)
+      index++
     } else {
-      clearInterval(typewriterInterval as number);
-      typewriterInterval = null;
+      clearInterval(typewriterInterval as number)
+      typewriterInterval = null
     }
-  }, typingSpeed);
-};
+  }, typingSpeed)
+}
 
 const changeDisplayedText = () => {
   if (displayedText.value === aiResponseStore.aiResponseSecond) {
-    displayedText.value = aiResponseStore.aiResponseFirst ?? "";
+    displayedText.value = aiResponseStore.aiResponseFirst ?? ''
   } else {
-    displayedText.value = aiResponseStore.aiResponseSecond ?? "";
+    displayedText.value = aiResponseStore.aiResponseSecond ?? ''
   }
-};
+}
 
 watch(
   () => aiResponseStore.aiResponseSecond,
   (newVal) => {
     if (newVal) {
-      typeWriterEffect(newVal);
+      typeWriterEffect(newVal)
     }
   },
   { immediate: true }
-);
+)
 
 watch(
   () => aiResponseStore.isLoadingSecond,
   (newVal) => {
-    isLoadingAIResponse.value = newVal;
+    isLoadingAIResponse.value = newVal
   }
-);
+)
 
 onUnmounted(() => {
-  console.log("CommitSummariesView unmounted");
-  aiResponseStore.resetAiResponse();
+  console.log('CommitSummariesView unmounted')
+  aiResponseStore.resetAiResponse()
   if (typewriterInterval !== null) {
-    clearInterval(typewriterInterval);
+    clearInterval(typewriterInterval)
   }
-});
+})
 </script>
 
 <style>
-
 @keyframes fade-in {
   from {
     opacity: 0;

@@ -1,17 +1,9 @@
 <template>
   <Teleport to="body">
     <Transition name="modal-outer">
-      <div
-        v-show="modalActive"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 transition-opacity"
-        @click="closeModal"
-      >
+      <div v-show="modalActive" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 transition-opacity" @click="closeModal">
         <Transition name="modal-inner">
-          <div
-            v-if="modalActive"
-            class="bg-card text-card-foreground rounded-xl p-6 max-w-lg w-full shadow-lg"
-            @click.stop
-          >
+          <div v-if="modalActive" class="bg-card text-card-foreground rounded-xl p-6 max-w-lg w-full shadow-lg" @click.stop>
             <slot></slot>
           </div>
         </Transition>
@@ -24,14 +16,14 @@
 defineProps({
   modalActive: {
     type: Boolean,
-    default: false,
-  },
-});
-const emit = defineEmits(["close-modal"]);
+    default: false
+  }
+})
+const emit = defineEmits(['close-modal'])
 
 const closeModal = () => {
-  emit("close-modal");
-};
+  emit('close-modal')
+}
 </script>
 
 <style scoped>

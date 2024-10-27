@@ -3,11 +3,7 @@
     <table class="min-w-full bg-white shadow-md rounded-lg overflow-hidden">
       <thead class="bg-gray-200">
         <tr>
-          <th
-            v-for="m in 5"
-            :key="'header-cell-' + m"
-            class="py-4 px-6 border-b border-gray-200 text-center"
-          >
+          <th v-for="m in 5" :key="'header-cell-' + m" class="py-4 px-6 border-b border-gray-200 text-center">
             <Skeleton class="h-4 w-full" />
           </th>
         </tr>
@@ -36,5 +32,5 @@
 </template>
 
 <script setup lang="ts">
-import { Skeleton } from "./ui/skeleton";
+import { Skeleton } from './ui/skeleton'
 </script>

@@ -1,36 +1,36 @@
-import { defineStore } from "pinia";
+import { defineStore } from 'pinia'
 
-export const useAiResponseStore = defineStore("aiResponse", {
+export const useAiResponseStore = defineStore('aiResponse', {
   state: () => ({
-    outputLanguage: "english" as string,
+    outputLanguage: 'english' as string,
     aiResponseFirst: null as string | null,
     isLoadingFirst: true,
     aiResponseSecond: null as string | null,
     isLoadingSecond: true,
-    isAuthorIncluded: false,
+    isAuthorIncluded: false
   }),
   actions: {
     setOutputLanguage(language: string) {
-      this.outputLanguage = language;
+      this.outputLanguage = language
     },
     setAiResponseFirst(response: string) {
-      this.aiResponseFirst = response;
-      this.isLoadingFirst = false;
+      this.aiResponseFirst = response
+      this.isLoadingFirst = false
     },
     setAiResponseSecond(response: string) {
-      this.aiResponseSecond = response;
-      this.isLoadingSecond = false;
+      this.aiResponseSecond = response
+      this.isLoadingSecond = false
     },
     resetAiResponse() {
-      this.outputLanguage = "english";
-      this.aiResponseFirst = null;
-      this.aiResponseSecond = null;
-      this.isLoadingFirst = true;
-      this.isLoadingSecond = true;
-      this.isAuthorIncluded = false;
+      this.outputLanguage = 'english'
+      this.aiResponseFirst = null
+      this.aiResponseSecond = null
+      this.isLoadingFirst = true
+      this.isLoadingSecond = true
+      this.isAuthorIncluded = false
     },
     setIsAuthorIncluded(isAuthorIncluded: boolean) {
-      this.isAuthorIncluded = isAuthorIncluded;
-    },
-  },
-});
+      this.isAuthorIncluded = isAuthorIncluded
+    }
+  }
+})
