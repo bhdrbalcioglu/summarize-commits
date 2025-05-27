@@ -1,40 +1,43 @@
 <template>
-  <div class="border rounded-md">
+  <div class="border rounded-md overflow-x-auto">
     <Table>
       <TableHeader>
         <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
-          <TableHead v-for="header in headerGroup.headers" :key="header.id">
-            <div v-if="!header.isPlaceholder">
+          <TableHead v-for="header in headerGroup.headers" :key="header.id" :style="{ width: header.getSize() !== 150 ? `${header.getSize()}px` : undefined }">
+            <div v-if="!header.isPlaceholder" class="flex items-center space-x-1">
               <FlexRender :render="header.column.columnDef.header" :props="header.getContext()" />
+              <template v-if="header.column.getCanSort()">
+                <button @click="() => header.column.toggleSorting(false)" :title="`Sort Ascending by ${header.column.id}`">
+                  <ArrowUp class="h-3 w-3" :class="{ 'text-blue-500': header.column.getIsSorted() === 'asc' }" />
+                </button>
+                <button @click="() => header.column.toggleSorting(true)" :title="`Sort Descending by ${header.column.id}`">
+                  <ArrowDown class="h-3 w-3" :class="{ 'text-blue-500': header.column.getIsSorted() === 'desc' }" />
+                </button>
+              </template>
             </div>
           </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        <template v-if="table.getFilteredRowModel().rows.length">
+        <template v-if="table.getRowModel().rows.length">
           <TableRow
-            v-for="row in table.getFilteredRowModel().rows"
-            :key="`${row.id}-${row.original.id}`"
+            v-for="row in table.getRowModel().rows"
+            :key="row.id"
+            :data-state="row.getIsSelected() && 'selected'"
             :class="{
-              'bg-blue-100 border-l-4 border-blue-500 shadow-md': row.getIsSelected(),
-              'transition-all duration-100 ease-in-out': true
+              'bg-blue-50 dark:bg-blue-900/30': row.getIsSelected(),
+              'hover:bg-muted/50': true
             }"
-            class="border-b border-gray-200"
+            @click="() => row.toggleSelected()"
           >
-            <TableCell
-              v-for="cell in row.getVisibleCells()"
-              :key="cell.id"
-              :class="{
-                'font-medium': row.getIsSelected()
-              }"
-            >
+            <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
               <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
             </TableCell>
           </TableRow>
         </template>
         <template v-else>
           <TableRow>
-            <TableCell :colspan="columnsWithFilters.length" class="h-24 text-center"> No results. </TableCell>
+            <TableCell :colspan="tableColumns.length" class="h-24 text-center"> No commits found. </TableCell>
           </TableRow>
         </template>
       </TableBody>
@@ -42,125 +45,136 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts" generic="TData extends Commit">
+// Removed TValue as it wasn't explicitly used and TData covers Commit
 import { ref, watch, computed } from 'vue'
-import { useVueTable, getCoreRowModel, getSortedRowModel, getFilteredRowModel, type ColumnFiltersState } from '@tanstack/vue-table'
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../../components/ui/table'
-import { FlexRender } from '@tanstack/vue-table'
+import {
+  useVueTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  type SortingState,
+  type RowSelectionState,
+  type ColumnFiltersState,
+  FlexRender,
+  type Row // Import Row type for 'r' parameter
+} from '@tanstack/vue-table'
+import { ArrowUp, ArrowDown } from 'lucide-vue-next'
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../ui/table'
 import type { Commit } from '../../types/commit'
-import { columns } from './columns'
+import { columns as defineColumnsFunction } from './columns'
 
 const props = defineProps<{
-  commits: Commit[]
-  selectedCommits: string[]
+  commits: TData[]
+  selectedCommitIds: string[]
 }>()
-
-const columnFilters = ref<ColumnFiltersState>([])
-const selectedAuthors = ref<string[]>([])
-
-const authorsList = computed(() => {
-  return Array.from(new Set(props.commits.map((commit) => commit.author_name)))
-})
-const columnsWithFilters = columns(selectedAuthors, authorsList)
 
 const emit = defineEmits<{
   (e: 'toggleSelection', commitId: string): void
 }>()
 
-const sorting = ref([{ id: 'created_at', desc: true }])
-const rowSelection = ref({})
+const sorting = ref<SortingState>([])
+const rowSelection = ref<RowSelectionState>({})
+const columnFilters = ref<ColumnFiltersState>([])
 
-const selectedCommitIds = computed(() =>
-  Object.entries(rowSelection.value)
-    .filter(([_, selected]) => selected)
-    .map(([index]) => props.commits[parseInt(index)].id)
-)
+// For author filtering, if defineColumns needs these reactively
+const selectedAuthorsForFilter = ref<string[]>([]) // This will be updated by AuthorFilterHeader
+const allAuthorsList = computed(() => {
+  // Ensure author is correctly accessed. Assuming `commit.author` is an object with a `name` property.
+  return Array.from(new Set(props.commits.map((commit) => commit.author.name)))
+})
 
-const table = computed(() =>
-  useVueTable({
-    get data() {
-      return props.commits
-    },
-    columns: columnsWithFilters,
-    state: {
-      get sorting() {
-        return sorting.value
-      },
-      get rowSelection() {
-        return rowSelection.value
-      },
-      get columnFilters() {
-        return columnFilters.value
-      }
-    },
-    onSortingChange: (updaterOrValue) => {
-      sorting.value = typeof updaterOrValue === 'function' ? updaterOrValue(sorting.value) : updaterOrValue
-    },
-    onRowSelectionChange: (updaterOrValue) => {
-      const newSelection: Record<number, boolean> = typeof updaterOrValue === 'function' ? updaterOrValue(rowSelection.value as Record<number, boolean>) : updaterOrValue
+// Pass the reactive refs to the columns definition function
+const tableColumns = computed(() => defineColumnsFunction(selectedAuthorsForFilter, allAuthorsList))
 
-      const changedIndex = Object.keys(newSelection).find((index) => {
-        const numIndex = Number(index)
-        return newSelection[numIndex as keyof typeof newSelection] !== rowSelection.value[numIndex as keyof typeof rowSelection.value]
-      })
-
-      if (changedIndex !== undefined) {
-        const commitId = props.commits[Number(changedIndex)].id
-        emit('toggleSelection', commitId)
-      }
-
-      rowSelection.value = newSelection
-    },
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel()
-  })
-)
-watch(
-  () => props.selectedCommits,
-  (newSelectedCommits) => {
-    rowSelection.value = props.commits.reduce((acc, commit, index) => {
-      acc[index] = newSelectedCommits.includes(commit.id)
-      return acc
-    }, {} as Record<number, boolean>)
+const table = useVueTable({
+  get data() {
+    return props.commits
   },
-  { immediate: true }
-)
+  columns: tableColumns.value, // Use the computed columns
+  state: {
+    get sorting() {
+      return sorting.value
+    },
+    get rowSelection() {
+      return rowSelection.value
+    },
+    get columnFilters() {
+      return columnFilters.value
+    }
+  },
+  enableRowSelection: true,
+  onRowSelectionChange: (updaterOrValue) => {
+    const oldSelection = { ...rowSelection.value }
+    const newSelection = typeof updaterOrValue === 'function' ? updaterOrValue(oldSelection) : updaterOrValue
+    const allRowIndexes = new Set([...Object.keys(oldSelection), ...Object.keys(newSelection)])
+
+    allRowIndexes.forEach((stringIndex) => {
+      const index = Number(stringIndex)
+      const wasSelected = !!oldSelection[index]
+      const isSelected = !!newSelection[index]
+      if (wasSelected !== isSelected && props.commits[index]) {
+        emit('toggleSelection', props.commits[index].id)
+      }
+    })
+    // rowSelection.value is updated by the watcher based on props.selectedCommitIds
+  },
+  onSortingChange: (updaterOrValue) => {
+    sorting.value = typeof updaterOrValue === 'function' ? updaterOrValue(sorting.value) : updaterOrValue
+  },
+  onColumnFiltersChange: (updaterOrValue) => {
+    // This is where the columnFilters ref is updated when AuthorFilterHeader changes selectedAuthorsForFilter
+    // TanStack table will automatically use this for filtering if the column's filterFn is set
+    columnFilters.value = typeof updaterOrValue === 'function' ? updaterOrValue(columnFilters.value) : updaterOrValue
+  },
+  getCoreRowModel: getCoreRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  getFilteredRowModel: getFilteredRowModel(),
+  getPaginationRowModel: getPaginationRowModel(),
+  getRowId: (row) => row.id
+})
+
+// Watch selectedAuthorsForFilter (updated by AuthorFilterHeader) to set table's columnFilters
 watch(
-  () => props.commits,
-  (newCommits) => {
-    console.log('All commits updated', newCommits)
-    // Reset row selection when commits change
-    rowSelection.value = newCommits.reduce((acc, _, index) => {
-      acc[index] = props.selectedCommits.includes(newCommits[index].id)
-      return acc
-    }, {} as Record<number, boolean>)
-    // Optionally, you can perform additional actions here when commits change
+  selectedAuthorsForFilter,
+  (newAuthors) => {
+    const authorFilter = table.getColumn('author_name') // Assuming 'author_name' is the column ID
+    if (authorFilter) {
+      authorFilter.setFilterValue(newAuthors.length > 0 ? newAuthors : undefined)
+    }
   },
   { deep: true }
 )
 
-watch(selectedCommitIds, (newSelectedIds) => {
-  const addedIds = newSelectedIds.filter((id) => !props.selectedCommits.includes(id))
-  const removedIds = props.selectedCommits.filter((id) => !newSelectedIds.includes(id))
-
-  addedIds.forEach((id) => emit('toggleSelection', id))
-  removedIds.forEach((id) => emit('toggleSelection', id))
-})
-
-watch(selectedAuthors, (newAuthors) => {
-  console.log('Selected authors changed:', newAuthors)
-  columnFilters.value = [
-    {
-      id: 'author_name',
-      value: newAuthors
-    }
-  ]
-})
 watch(
-  () => table.value.getState().columnFilters,
-  (newFilters) => {
-    console.log('Column filters updated DataTable.vue:', newFilters)
+  () => props.selectedCommitIds,
+  (newSelectedIds) => {
+    const newRowSelectionState: RowSelectionState = {}
+    // Use table.value to access the table instance
+    table.getRowModel().rows.forEach((row) => {
+      if (newSelectedIds.includes(row.original.id)) {
+        newRowSelectionState[row.id] = true // Use row.id (which is commit.id due to getRowId)
+      }
+    })
+    rowSelection.value = newRowSelectionState
+  },
+  { immediate: true, deep: true }
+)
+
+watch(
+  () => props.commits,
+  (newCommits) => {
+    // When commits prop changes, re-sync the selection state
+    const newRowSelectionState: RowSelectionState = {}
+    // Use table.value here as well
+    const currentRows = table.getRowModel().rows
+    currentRows.forEach((row) => {
+      if (props.selectedCommitIds.includes(row.original.id)) {
+        newRowSelectionState[row.id] = true
+      }
+    })
+    rowSelection.value = newRowSelectionState
   },
   { deep: true }
 )

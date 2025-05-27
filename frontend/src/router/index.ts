@@ -1,27 +1,43 @@
+// frontend/src/router/index.ts
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
-import GitLabCallbackView from '../views/GitlabCallbackView.vue'
+import HomeView from '../views/HomeView.vue'
+// import GitLabCallbackView from '../views/GitlabCallbackView.vue'; // To be re-evaluated
+// import GithubCallbackView from '../views/GithubCallbackView.vue'; // To be re-evaluated
 import GroupsView from '../views/GroupsView.vue'
 import ProjectsView from '../views/ProjectsView.vue'
-import HomeView from '../views/HomeView.vue'
 import UserView from '../views/UserView.vue'
 import ProjectPageView from '../views/ProjectPageView.vue'
-import CommitSummariesView from '../views/CommitSummariesView.vue'
-import FileTreeView from '../views/FileTreeView.vue'
 import CommitsView from '../views/CommitsView.vue'
-import { useAuthStore } from '../stores/auth'
-import { useUserStore } from '../stores/user'
+import FileTreeView from '../views/FileTreeView.vue'
+import CommitSummariesView from '../views/CommitSummariesView.vue'
+import { useAuthStore } from '../stores/authStore'
+
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
     name: 'Home',
-    component: HomeView
+    component: HomeView,
+    meta: { requiresAuth: false, guestOnly: true } // GuestOnly: if logged in, redirect away from home/login
   },
-  {
-    path: '/oauth/gitlab/callback',
-    name: 'GitLabCallback',
-    component: GitLabCallbackView
-  },
+  // OAuth Callback Routes from Backend:
+  // The backend now handles the OAuth code exchange and then redirects to a standard frontend route.
+  // These specific frontend callback views might no longer be directly hit or needed in the same way.
+  // The backend will redirect to a route like '/' or '/dashboard' after successful auth.
+  // Let's assume for now the backend redirects to '/' after successful login.
+  // If backend redirects to a specific path like '/auth/success', you'd define that.
 
+  // {
+  //   path: '/oauth/gitlab/callback', // Or whatever your backend redirects to
+  //   name: 'AuthCallbackHandler', // A generic handler or handled by the target route
+  //   component: HomeView, // Or a dedicated component that calls authStore.fetchCurrentUser()
+  //   // beforeEnter: async (to, from, next) => {
+  //   //   const authStore = useAuthStore();
+  //   //   if (!authStore.isUserAuthenticated) { // If not yet picked up by initializeAuth
+  //   //      await authStore.fetchCurrentUser();
+  //   //   }
+  //   //   next(authStore.isUserAuthenticated ? '/' : '/'); // Redirect to home or dashboard
+  //   // },
+  // },
   {
     path: '/groups',
     name: 'Groups',
@@ -33,12 +49,13 @@ const routes: Array<RouteRecordRaw> = [
     name: 'ProjectsView',
     component: ProjectsView,
     props: (route) => ({
+      // Ensure groupStore.selectedGroupId is string | null
+      // And projectListStore criteria uses this appropriately
       groupId: route.query.groupId as string | undefined,
       groupName: route.query.groupName as string | undefined
     }),
     meta: { requiresAuth: true }
   },
-
   {
     path: '/user',
     name: 'User',
@@ -46,22 +63,26 @@ const routes: Array<RouteRecordRaw> = [
     meta: { requiresAuth: true }
   },
   {
-    path: '/projects/:name',
+    // For GitHub, 'projectIdentifier' will be 'owner/repoName'
+    // For GitLab, it will be the project ID
+    path: '/project/:projectIdentifier(.*)', // Use (.*) to capture paths with slashes for GitHub
     name: 'ProjectPage',
     component: ProjectPageView,
-    props: true,
+    props: true, // Passes route.params.projectIdentifier as prop
     meta: { requiresAuth: true },
     children: [
       {
-        path: 'commits',
-        name: 'CommitsView',
+        path: 'commits', // relative path, resolves to /project/:id/commits
+        name: 'ProjectCommitsView',
         component: CommitsView
       },
       {
-        path: 'file-tree',
-        name: 'FileTreeView',
-        component: FileTreeView
+        path: 'tree/:branchName?/:path(.*)*', // For file tree, branch optional, path can be nested
+        name: 'ProjectFileTreeView',
+        component: FileTreeView,
+        props: true
       }
+      // Add other project sub-routes here
     ]
   },
   {
@@ -69,21 +90,42 @@ const routes: Array<RouteRecordRaw> = [
     name: 'CommitSummaries',
     component: CommitSummariesView,
     meta: { requiresAuth: true }
+  },
+  // Catch-all route for 404 - Define this last
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: () => import('../views/NotFoundView.vue') // Example: lazy-load a 404 component
   }
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL), // Use Vite's BASE_URL
   routes
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
-  const userStore = useUserStore()
-  if (to.meta.requiresAuth && !authStore.isLoggedIn) {
-    next({ name: 'Home' })
-    userStore.clearUser()
+
+  // Ensure auth state is initialized, especially on first load or hard refresh
+  // initializeAuth now calls fetchCurrentUser which updates isAuthenticated
+  if (!authStore.user && !authStore.isLoading) {
+    // Only if not already checked and not currently loading
+    await authStore.initializeAuth()
+  }
+
+  const requiresAuth = to.meta.requiresAuth
+  const guestOnly = to.meta.guestOnly // For routes like login/home that authed users should skip
+
+  if (requiresAuth && !authStore.isUserAuthenticated) {
+    // If route requires auth and user is not authenticated, redirect to home (which might be login)
+    next({ name: 'Home', query: { redirect: to.fullPath } }) // Save redirect path
+  } else if (guestOnly && authStore.isUserAuthenticated) {
+    // If route is for guests only (like Home/Login page) and user IS authenticated,
+    // redirect to a default authenticated page, e.g., 'Groups' or 'ProjectsView'.
+    next({ name: 'Groups' }) // Or your main authenticated landing page
   } else {
+
     next()
   }
 })

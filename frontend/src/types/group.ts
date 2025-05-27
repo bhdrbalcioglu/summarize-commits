@@ -1,11 +1,9 @@
-export type Group = {
-  id: number
-  avatar_url: string
-  created_at: string
-  description: string
-  full_name: string
-  full_path: string
-  visibility: string
-  web_url: string
-  [key: string]: any // Accommodate any extra properties
+export interface Group {
+  id: string | number;
+  avatar_url: string | null;
+  description: string | null;
+  name: string;
+  path: string;
+  provider: 'gitlab' | 'github';
+  web_url: string;
 }

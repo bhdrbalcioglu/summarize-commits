@@ -2,8 +2,8 @@ import type { ColumnDef } from "@tanstack/vue-table";
 import { h, Ref } from "vue";
 import type { Commit } from "../../types/commit";
 import { ArrowUpDown } from "lucide-vue-next";
-import { Button } from "../../components/ui/button";
-import { Checkbox } from "../../components/ui/checkbox";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
 import { FilterFn } from "@tanstack/vue-table";
 import AuthorFilterHeader from "./AuthorFilterHeader.vue";
 

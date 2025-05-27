@@ -33,7 +33,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useVueTable, getCoreRowModel, getSortedRowModel, type ColumnDef, type SortingState } from '@tanstack/vue-table'
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../../components/ui/table'
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../ui/table'
 import { FlexRender } from '@tanstack/vue-table'
 import type { Group } from '../../types/group'
 import { valueUpdater } from '../lib/utils'

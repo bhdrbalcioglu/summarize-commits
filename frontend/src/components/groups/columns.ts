@@ -4,7 +4,7 @@ import type { ColumnDef } from '@tanstack/vue-table'
 import { h } from 'vue'
 import type { Group } from '../../types/group'
 import { ArrowUpDown } from 'lucide-vue-next'
-import { Button } from '../../components/ui/button'
+import { Button } from '../ui/button'
 
 export const columns: ColumnDef<Group>[] = [
   {

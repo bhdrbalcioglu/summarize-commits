@@ -2,7 +2,7 @@ import type { ColumnDef } from '@tanstack/vue-table'
 import { h } from 'vue'
 import type { Project } from '../../types/project'
 import { ArrowUpDown } from 'lucide-vue-next'
-import { Button } from '../../components/ui/button'
+import { Button } from '../ui/button'
 
 export const columns: ColumnDef<Project>[] = [
   {
