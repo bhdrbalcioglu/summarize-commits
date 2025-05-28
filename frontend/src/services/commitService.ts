@@ -1,5 +1,5 @@
 import apiClient from './apiService'
-import type { Branch, Commit } from '@/types/commit'
+import type { Branch, Commit, CommitDetail } from '@/types/commit'
 import { useAuthStore } from '@/stores/authStore'
 
 export interface FetchCommitsResult {
@@ -81,6 +81,49 @@ class CommitService {
       hasMore: response.data.isMore ?? false,
       totalCommits: response.data.totalCommits,
       currentPage: response.data.currentPage
+    }
+  }
+
+  async fetchCommitDetail(projectId: string | number, commitSha: string): Promise<CommitDetail> {
+    console.log('🔍 [commitService] fetchCommitDetail called')
+    console.log('🆔 [commitService] Project ID:', projectId)
+    console.log('📝 [commitService] Commit SHA:', commitSha)
+    
+    const authStore = useAuthStore()
+    const provider = authStore.currentProvider
+
+    if (!provider) {
+      console.log('❌ [commitService] No provider available')
+      throw new Error('No provider available')
+    }
+
+    console.log('🔗 [commitService] Provider:', provider)
+
+    let endpoint = ''
+    if (provider === 'gitlab') {
+      endpoint = `/gitlab/projects/${projectId}/commits/${commitSha}/details`
+    } else if (provider === 'github') {
+      // For GitHub, projectId should be in format "owner/repo"
+      endpoint = `/github/repos/${projectId}/commits/${commitSha}`
+    } else {
+      console.log('❌ [commitService] Unsupported provider:', provider)
+      throw new Error(`Unsupported provider: ${provider}`)
+    }
+
+    console.log('🌐 [commitService] API endpoint:', endpoint)
+    console.log('📤 [commitService] Making API request...')
+
+    try {
+      const response = await apiClient.get<CommitDetail>(endpoint)
+      console.log('✅ [commitService] API response received')
+      console.log('📊 [commitService] Response data keys:', Object.keys(response.data))
+      console.log('📁 [commitService] Files changed count:', response.data.files_changed?.length)
+      console.log('👤 [commitService] Author:', response.data.author?.name)
+      
+      return response.data
+    } catch (error) {
+      console.error('💥 [commitService] Error fetching commit detail:', error)
+      throw error
     }
   }
 }

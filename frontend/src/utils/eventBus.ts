@@ -7,41 +7,41 @@ import type { Commit, Branch } from '@/types/commit'
  */
 export interface EventPayloads {
   // Authentication events
-  'AUTH_STATUS_CHANGED': { isAuthenticated: boolean; provider: string | null }
-  'USER_LOGGED_OUT': void
-  
+  AUTH_STATUS_CHANGED: { isAuthenticated: boolean; provider: string | null }
+  USER_LOGGED_OUT: void
+
   // Project events
-  'PROJECT_LOADING_STARTED': { projectIdentifier: string }
-  'PROJECT_LOADED': { project: Project }
-  'PROJECT_LOADING_FAILED': { error: string; projectIdentifier: string }
-  'PROJECT_SELECTED': { project: Project }
-  
+  PROJECT_LOADING_STARTED: { projectIdentifier: string }
+  PROJECT_LOADED: { project: Project }
+  PROJECT_LOADING_FAILED: { error: string; projectIdentifier: string }
+  PROJECT_SELECTED: { project: Project }
+
   // Branch events
-  'BRANCHES_LOADING_STARTED': { projectId: string }
-  'BRANCHES_LOADED': { branches: Branch[]; projectId: string }
-  'BRANCHES_LOADING_FAILED': { error: string; projectId: string }
-  'BRANCH_SELECTED': { branch: Branch; projectId: string }
-  'DEFAULT_BRANCH_SELECTED': { branch: Branch; projectId: string }
-  
+  BRANCHES_LOADING_STARTED: { projectId: string }
+  BRANCHES_LOADED: { branches: Branch[]; projectId: string }
+  BRANCHES_LOADING_FAILED: { error: string; projectId: string }
+  BRANCH_SELECTED: { branch: Branch; projectId: string }
+  DEFAULT_BRANCH_SELECTED: { branch: Branch; projectId: string }
+
   // Commit events
-  'COMMITS_LOADING_STARTED': { branchName: string; projectId: string }
-  'COMMITS_LOADED': { commits: Commit[]; branchName: string; projectId: string; hasMore: boolean }
-  'COMMITS_LOADING_FAILED': { error: string; branchName: string; projectId: string }
-  'COMMIT_SELECTION_CHANGED': { commitId: string; isSelected: boolean }
-  'COMMIT_FILTERS_CHANGED': { filters: Record<string, any> }
-  
+  COMMITS_LOADING_STARTED: { branchName: string; projectId: string }
+  COMMITS_LOADED: { commits: Commit[]; branchName: string; projectId: string; hasMore: boolean }
+  COMMITS_LOADING_FAILED: { error: string; branchName: string; projectId: string }
+  COMMIT_SELECTION_CHANGED: { commitId: string; isSelected: boolean }
+  COMMIT_FILTERS_CHANGED: { filters: Record<string, any> }
+
   // Navigation events
-  'ROUTE_CHANGED': { to: string; from: string; params: Record<string, any> }
-  'NAVIGATION_REQUESTED': { route: string; params?: Record<string, any> }
-  
+  ROUTE_CHANGED: { to: string; from: string; params: Record<string, any> }
+  NAVIGATION_REQUESTED: { route: string; params?: Record<string, any> }
+
   // UI events
-  'LOADING_STATE_CHANGED': { component: string; isLoading: boolean }
-  'ERROR_OCCURRED': { component: string; error: string }
-  'SUCCESS_MESSAGE': { message: string }
-  
+  LOADING_STATE_CHANGED: { component: string; isLoading: boolean }
+  ERROR_OCCURRED: { component: string; error: string }
+  SUCCESS_MESSAGE: { message: string }
+
   // Data refresh events
-  'REFRESH_REQUESTED': { component: string; data?: any }
-  'CACHE_INVALIDATED': { key: string }
+  REFRESH_REQUESTED: { component: string; data?: any }
+  CACHE_INVALIDATED: { key: string }
 }
 
 export type EventName = keyof EventPayloads
@@ -120,7 +120,7 @@ class TypedEventBus {
     // Execute regular listeners
     const regularListeners = this.listeners.get(event)
     if (regularListeners) {
-      const promises = Array.from(regularListeners).map(listener => {
+      const promises = Array.from(regularListeners).map((listener) => {
         try {
           return Promise.resolve(listener(payload))
         } catch (error) {
@@ -134,7 +134,7 @@ class TypedEventBus {
     // Execute once listeners
     const onceListeners = this.onceListeners.get(event)
     if (onceListeners) {
-      const promises = Array.from(onceListeners).map(listener => {
+      const promises = Array.from(onceListeners).map((listener) => {
         try {
           return Promise.resolve(listener(payload))
         } catch (error) {
@@ -143,7 +143,7 @@ class TypedEventBus {
         }
       })
       await Promise.all(promises)
-      
+
       // Clear once listeners after execution
       this.onceListeners.delete(event)
     }
@@ -185,7 +185,7 @@ class TypedEventBus {
       const once = this.onceListeners.get(event)?.size || 0
       return regular + once
     }
-    
+
     let total = 0
     for (const listeners of this.listeners.values()) {
       total += listeners.size
@@ -225,7 +225,7 @@ export function useEventBus() {
   }
 
   const cleanup = () => {
-    activeListeners.forEach(unsubscribe => unsubscribe())
+    activeListeners.forEach((unsubscribe) => unsubscribe())
     activeListeners.length = 0
   }
 
@@ -242,11 +242,11 @@ export function useEventBus() {
  * Development helper for debugging events
  */
 export function enableEventDebugging() {
-  if (process.env.NODE_ENV === 'development') {
+  if (import.meta.env.DEV) {
     const originalEmit = eventBus.emit.bind(eventBus)
-    eventBus.emit = async function<T extends EventName>(event: T, payload: EventPayload<T>) {
+    eventBus.emit = async function <T extends EventName>(event: T, payload: EventPayload<T>) {
       console.log(`🚀 Event emitted: ${event}`, payload)
       return originalEmit(event, payload)
     }
   }
-} 
+}

@@ -156,11 +156,11 @@ export const useCommitStore = defineStore('commit', () => {
   // Actions
   const fetchBranchesForProject = async () => {
     const authStore = useAuthStore()
-    const projectStore = useProjectStore()
+      const projectStore = useProjectStore()
 
     if (!authStore.isUserAuthenticated || !projectStore.currentProject) {
-      return
-    }
+        return
+      }
 
     try {
       statusBranches.value = 'loading'
@@ -309,6 +309,96 @@ export const useCommitStore = defineStore('commit', () => {
     await eventBus.emit('COMMIT_FILTERS_CHANGED', { filters })
   }
 
+  const prepareCommitBundlesForAI = async (): Promise<BackendCommitBundleItem[]> => {
+    console.log('📦 [commitStore] Starting prepareCommitBundlesForAI')
+    
+    const authStore = useAuthStore()
+    const projectStore = useProjectStore()
+
+    if (!authStore.isUserAuthenticated || !projectStore.currentProject) {
+      console.log('❌ [commitStore] Authentication or project check failed')
+      console.log('🔐 [commitStore] User authenticated:', authStore.isUserAuthenticated)
+      console.log('📁 [commitStore] Current project:', projectStore.currentProject?.name)
+      throw new Error('User not authenticated or no project selected')
+    }
+
+    if (selectedCommitIdsForAI.value.length === 0) {
+      console.log('❌ [commitStore] No commits selected for AI analysis')
+      throw new Error('No commits selected for AI analysis')
+    }
+
+    console.log('📊 [commitStore] Selected commit IDs:', selectedCommitIdsForAI.value)
+
+    try {
+      statusCommitBundles.value = 'loading'
+      errorMsgCommitBundles.value = null
+
+      const projectId = getProjectIdentifier(projectStore.currentProject)
+      console.log('🆔 [commitStore] Project identifier:', projectId)
+      
+      const commitBundles: BackendCommitBundleItem[] = []
+
+      console.log('🔄 [commitStore] Fetching detailed commit data for', selectedCommitIdsForAI.value.length, 'commits')
+      
+      // Fetch detailed commit data for each selected commit
+      for (const commitId of selectedCommitIdsForAI.value) {
+        try {
+          console.log('📥 [commitStore] Fetching details for commit:', commitId)
+          const commitDetail = await commitService.fetchCommitDetail(projectId, commitId)
+          console.log('✅ [commitStore] Commit detail received:', {
+            id: commitDetail.id,
+            author: commitDetail.author.name,
+            filesCount: commitDetail.files_changed.length,
+            messagePreview: commitDetail.message.substring(0, 50) + '...'
+          })
+          
+          // Convert to BackendCommitBundleItem format
+          const bundle: BackendCommitBundleItem = {
+            provider: commitDetail.provider,
+            commit_id: commitDetail.id,
+            author_name: commitDetail.author.name,
+            message: commitDetail.message,
+            files_changed: commitDetail.files_changed.map((file: any) => ({
+              file_path: file.new_path,
+              diff: file.diff
+            }))
+          }
+          
+          console.log('🔄 [commitStore] Converted bundle:', {
+            commit_id: bundle.commit_id,
+            author_name: bundle.author_name,
+            files_count: bundle.files_changed.length,
+            total_diff_size: bundle.files_changed.reduce((sum, f) => sum + f.diff.length, 0)
+          })
+          
+          commitBundles.push(bundle)
+        } catch (error) {
+          console.error(`💥 [commitStore] Failed to fetch details for commit ${commitId}:`, error)
+          // Continue with other commits rather than failing completely
+        }
+      }
+
+      if (commitBundles.length === 0) {
+        console.log('❌ [commitStore] No commit bundles were successfully prepared')
+        throw new Error('Failed to prepare any commit data for AI analysis')
+      }
+
+      console.log('✅ [commitStore] Successfully prepared', commitBundles.length, 'commit bundles')
+      console.log('📊 [commitStore] Total diff size:', commitBundles.reduce((sum, bundle) => 
+        sum + bundle.files_changed.reduce((fileSum, file) => fileSum + file.diff.length, 0), 0
+      ), 'characters')
+
+      statusCommitBundles.value = 'ready'
+      return commitBundles
+
+    } catch (error: any) {
+      console.error('💥 [commitStore] Error in prepareCommitBundlesForAI:', error)
+      statusCommitBundles.value = 'error'
+      errorMsgCommitBundles.value = error.message || 'Failed to prepare commit bundles for AI'
+      throw error
+    }
+  }
+
   const resetCommitState = () => {
     commits.value = []
     selectedCommitIdsForAI.value = []
@@ -374,6 +464,7 @@ export const useCommitStore = defineStore('commit', () => {
     loadMoreCommits,
     toggleCommitSelectionForAI,
     setCommitFilters,
+    prepareCommitBundlesForAI,
     resetCommitState,
     resetBranchState,
     resetAllState,

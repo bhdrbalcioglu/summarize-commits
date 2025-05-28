@@ -76,11 +76,7 @@ export const findOrCreateUserFromOAuth = async (
   oauthProfile: OAuthUserProfile,
   providerAccessToken: string
 ): Promise<User> => {
-  console.log(
-    `[AuthService] Finding or creating user. Provider: ${provider}, Profile ID: ${
-      oauthProfile.id
-    }, Token: ${providerAccessToken ? "RECEIVED" : "MISSING"}`
-  );
+  
 
   let appUser = usersStore.find(
     (u) => u.provider === provider && u.id === oauthProfile.id // ID'ler string veya number olabilir, dikkat!
@@ -128,22 +124,12 @@ export const getAppUserByIdAndProvider = async (
   userId: string | number,
   provider: GitProvider
 ): Promise<User | null> => {
-  console.log(
-    `[AuthService]: Attempting to find user with ID ${userId} for provider ${provider}`
-  );
   const user = usersStore.find(
     (u) => String(u.id) === String(userId) && u.provider === provider
   );
   if (!user) {
-    console.log(
-      `[AuthService]: User not found with ID ${userId} for provider ${provider}`
-    );
     return null;
   }
-  console.log(`[AuthService]: Found user:`, {
-    ...user,
-    providerAccessToken: user.providerAccessToken ? "***STORED***" : "MISSING",
-  });
   return user;
 };
 
@@ -151,21 +137,14 @@ export const getProviderAccessTokenForUser = async (
   userId: string | number,
   provider: GitProvider
 ): Promise<string | undefined> => {
-  console.log(
-    `[AuthService] Attempting to retrieve ${provider} token for user ID: ${userId}`
-  );
   const user = usersStore.find(
     (u) => String(u.id) === String(userId) && u.provider === provider
   );
 
   if (user && user.providerAccessToken) {
-    console.log(`[AuthService] Found ${provider} token for user ID: ${userId}`);
     return user.providerAccessToken;
   }
 
-  console.warn(
-    `[AuthService] No ${provider} token found for user ID: ${userId}. User exists: ${!!user}, Token exists: ${!!user?.providerAccessToken}`
-  );
   return undefined;
 };
 

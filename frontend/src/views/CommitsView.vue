@@ -145,7 +145,7 @@ const initializeCommitData = async () => {
 
 onMounted(() => {
   initializeEventListeners()
-  
+
   // Router guard ensures project is loaded, so initialize commit data
   if (project.value && status.value === 'ready') {
     initializeCommitData()
@@ -174,17 +174,39 @@ const handleLoadMoreCommits = () => {
 }
 
 const triggerAIProcessing = async () => {
+  console.log('🚀 [CommitsView] AI Processing triggered')
+  console.log('📊 [CommitsView] Selected commit IDs:', commitStore.selectedCommitIdsForAI)
+  console.log('🌐 [CommitsView] Target language:', aiResponseStore.targetLanguage)
+  console.log('👤 [CommitsView] Include author:', aiResponseStore.isAuthorInclusionEnabled)
+
   if (commitStore.selectedCommitIdsForAI.length === 0) {
+    console.log('❌ [CommitsView] No commits selected')
     alert('Please select at least one commit to summarize.')
     return
   }
-  // processCommitsAndGenerateNotes will internally call prepareCommitBundlesForAI
-  await aiResponseStore.processCommitsAndGenerateNotes()
-  if (!aiResponseStore.errorAnalysis && !aiResponseStore.errorNotesGeneration) {
-    router.push({ name: 'CommitSummaries' }) // Navigate on success
-  } else {
-    // Errors are shown in aiResponseStore state, UI can react or show alerts
-    alert('An error occurred during AI processing. Check console or error messages.')
+
+  // Navigate immediately for better UX
+  console.log('🎯 [CommitsView] Navigating to CommitSummaries immediately...')
+  router.push({ name: 'CommitSummaries' })
+
+  // Start AI processing in background
+  console.log('⏳ [CommitsView] Starting processCommitsAndGenerateNotes in background...')
+  
+  try {
+    // processCommitsAndGenerateNotes will internally call prepareCommitBundlesForAI
+    await aiResponseStore.processCommitsAndGenerateNotes()
+
+    console.log('✅ [CommitsView] AI processing completed')
+    console.log('🔍 [CommitsView] Analysis error:', aiResponseStore.errorAnalysis)
+    console.log('🔍 [CommitsView] Notes error:', aiResponseStore.errorNotesGeneration)
+
+    if (aiResponseStore.errorAnalysis || aiResponseStore.errorNotesGeneration) {
+      console.log('❌ [CommitsView] Errors occurred during AI processing')
+      // Errors will be displayed on the summary page via store state
+    }
+  } catch (error) {
+    console.error('💥 [CommitsView] Unexpected error in triggerAIProcessing:', error)
+    // Error will be handled and displayed on the summary page
   }
 }
 

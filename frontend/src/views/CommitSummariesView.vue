@@ -8,8 +8,8 @@
       <p v-else>No project selected or details available.</p>
     </div>
 
-    <div class="flex-1 p-8 mx-4 px-5 overflow-hidden sm:px-6 lg:px-8">
-      <div class="bg-white shadow-lg rounded-lg p-8 max-w-full">
+    <div class="flex-1 p-8 mx-4 px-5 overflow-hidden sm:px-6 lg:px-8 flex flex-col">
+      <div class="bg-white shadow-lg rounded-lg p-8 max-w-full flex-1 flex flex-col">
         <div class="flex justify-between items-center mb-6">
           <h1 class="text-xl font-extrabold text-gray-800 flex items-center">
             <i class="fas fa-clipboard-list mr-3 text-green-500"></i>
@@ -20,23 +20,40 @@
         <div v-if="aiResponseStore.errorAnalysis || aiResponseStore.errorNotesGeneration" class="mb-4 text-red-500 bg-red-100 p-3 rounded-md">
           <p v-if="aiResponseStore.errorAnalysis">Error during analysis: {{ aiResponseStore.errorAnalysis }}</p>
           <p v-if="aiResponseStore.errorNotesGeneration">Error during notes generation: {{ aiResponseStore.errorNotesGeneration }}</p>
-        </div>
-
-        <div class="ai-response relative bg-gray-50 p-4 rounded-md shadow-inner min-h-[200px]">
-          <div v-if="isLoadingAIResponse" class="flex items-center justify-center py-10 absolute inset-0 bg-gray-50 bg-opacity-75">
-            <i class="fas fa-spinner fa-spin text-3xl text-green-500"></i>
-            <p class="ml-3 text-gray-700">
-              {{ aiResponseStore.isLoadingAnalysis ? 'Analyzing commits...' : aiResponseStore.isLoadingNotesGeneration ? 'Generating notes...' : 'Loading...' }}
-            </p>
+          <div class="mt-3">
+            <button 
+              @click="retryAIProcessing" 
+              class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
+              :disabled="isLoadingAIResponse"
+            >
+              <i class="fas fa-redo mr-2"></i>
+              Retry
+            </button>
           </div>
-          <Textarea v-else v-model="displayedText" class="font-mono text-lg leading-relaxed w-full bg-transparent border-none focus:ring-0" :style="{ minHeight: '200px' }" readonly />
         </div>
 
-        <button v-show="displayedText && !isLoadingAIResponse" class="copy-button mt-6 px-5 py-3 bg-blue-600 text-white rounded-md flex items-center justify-center relative hover:bg-blue-700 transition duration-200" @click="copyToClipboard">
-          <i class="fas fa-copy mr-3"></i>
-          Copy
-          <div v-if="copiedMessageVisible" class="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 bg-green-500 text-white text-sm rounded px-3 py-1 shadow-lg opacity-0 animate-fade-in"><i class="fas fa-check mr-2"></i> Copied to Clipboard</div>
-        </button>
+        <!-- No commits selected warning -->
+        <div v-else-if="!isLoadingAIResponse && !aiResponseStore.currentGeneratedNotes && commitStore.selectedCommitIdsForAI.length === 0" class="mb-4 text-yellow-600 bg-yellow-100 p-3 rounded-md">
+          <p>No commits are selected for AI processing.</p>
+          <div class="mt-3">
+            <button 
+              @click="navigateToCommits" 
+              class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors"
+            >
+              <i class="fas fa-arrow-left mr-2"></i>
+              Go Back to Select Commits
+            </button>
+          </div>
+        </div>
+
+        <div class="flex-1">
+          <EnhancedTextDisplay
+            :text="aiResponseStore.currentGeneratedNotes"
+            :is-loading="isLoadingAIResponse"
+            :loading-message="loadingMessage"
+            @text-updated="handleTextUpdate"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -45,61 +62,46 @@
 <script setup lang="ts">
 import { useProjectStore } from '../stores/projectStore'
 import { useAiResponseStore } from '../stores/aiResponseStore'
-import { useCommitStore } from '../stores/commitStore' // Import commitStore
-import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
+import { useCommitStore } from '../stores/commitStore'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import ProjectCard from '../components/ProjectCard.vue'
-import { Textarea } from '../components/ui/textarea'
+import EnhancedTextDisplay from '../components/EnhancedTextDisplay.vue'
 
 const projectStore = useProjectStore()
 const aiResponseStore = useAiResponseStore()
-const commitStore = useCommitStore() // Instantiate commitStore
+const commitStore = useCommitStore()
 const router = useRouter()
 const route = useRoute()
 
-const copiedMessageVisible = ref(false)
-const displayedText = ref('')
-let typewriterInterval: number | null = null
-
 const isLoadingAIResponse = computed(() => aiResponseStore.isLoadingAnalysis || aiResponseStore.isLoadingNotesGeneration)
 
-const copyToClipboard = () => {
-  if (!displayedText.value) return
-  navigator.clipboard
-    .writeText(displayedText.value)
-    .then(() => {
-      copiedMessageVisible.value = true
-      setTimeout(() => {
-        copiedMessageVisible.value = false
-      }, 2000)
-    })
-    .catch((err) => {
-      console.error('Failed to copy text: ', err)
-    })
+const loadingMessage = computed(() => {
+  if (aiResponseStore.isLoadingAnalysis) return 'Analyzing commits...'
+  if (aiResponseStore.isLoadingNotesGeneration) return 'Generating notes...'
+  return 'Loading...'
+})
+
+const handleTextUpdate = (newText: string) => {
+  aiResponseStore.updateNotesResult(newText)
 }
 
-const typeWriterEffect = (text: string | null) => {
-  if (typewriterInterval !== null) {
-    clearInterval(typewriterInterval)
-  }
-  displayedText.value = ''
-  if (text === null || text === undefined) return
+const retryAIProcessing = () => {
+  console.log('🔄 [CommitSummariesView] Retrying AI processing...')
+  aiResponseStore.processCommitsAndGenerateNotes()
+}
 
-  let index = 0
-  const typingSpeed = 15
-
-  typewriterInterval = window.setInterval(() => {
-    if (index < text.length) {
-      displayedText.value += text.charAt(index)
-      index++
-    } else {
-      if (typewriterInterval !== null) clearInterval(typewriterInterval)
-      typewriterInterval = null
-    }
-  }, typingSpeed)
+const navigateToCommits = () => {
+  console.log('🔙 [CommitSummariesView] Navigating back to commits...')
+  router.push({ name: 'Commits' })
 }
 
 onMounted(async () => {
+  console.log('🎯 [CommitSummariesView] Component mounted')
+  console.log('📊 [CommitSummariesView] Selected commits:', commitStore.selectedCommitIdsForAI.length)
+  console.log('🤖 [CommitSummariesView] Current notes:', !!aiResponseStore.currentGeneratedNotes)
+  console.log('⏳ [CommitSummariesView] Is loading:', isLoadingAIResponse.value)
+
   let projectIdentifierToLoad: string | number | undefined = undefined
 
   if (!projectStore.activeProject) {
@@ -114,53 +116,29 @@ onMounted(async () => {
 
   if (projectIdentifierToLoad && (!projectStore.activeProject || (String(projectStore.activeProject.id) !== String(projectIdentifierToLoad).split('/')[0] && projectStore.activeProject.path_with_namespace !== projectIdentifierToLoad))) {
     // Fetch if project in store is different or not loaded
+    console.log('🔄 [CommitSummariesView] Loading project details...')
     await projectStore.fetchProjectDetails(projectIdentifierToLoad)
   }
 
-  if (aiResponseStore.currentGeneratedNotes) {
-    typeWriterEffect(aiResponseStore.currentGeneratedNotes)
-  } else if (projectStore.activeProject && commitStore.selectedCommitIdsForAI.length > 0 && !isLoadingAIResponse.value) {
-    // If project is loaded, commits are selected, and not already loading/has notes, then process
-    // This makes the view proactive in fetching AI summary if context is available.
-    aiResponseStore.processCommitsAndGenerateNotes()
-  } else if (!isLoadingAIResponse.value) {
-    // If not loading and no notes, and can't initiate AI process
-    // displayedText.value = "No summary available. Please select commits and trigger analysis.";
+  // Enhanced logic for handling immediate navigation from CommitsView
+  if (projectStore.activeProject && commitStore.selectedCommitIdsForAI.length > 0) {
+    if (!isLoadingAIResponse.value && !aiResponseStore.currentGeneratedNotes) {
+      // Start AI processing if we have commits selected but no processing has started
+      console.log('🚀 [CommitSummariesView] Starting AI processing automatically...')
+      aiResponseStore.processCommitsAndGenerateNotes()
+    } else if (isLoadingAIResponse.value) {
+      // AI processing is already in progress (likely from immediate navigation)
+      console.log('⏳ [CommitSummariesView] AI processing already in progress...')
+    } else if (aiResponseStore.currentGeneratedNotes) {
+      // Notes are already available
+      console.log('✅ [CommitSummariesView] Notes already available')
+    }
+  } else if (commitStore.selectedCommitIdsForAI.length === 0) {
+    console.log('⚠️ [CommitSummariesView] No commits selected for AI processing')
   }
-})
-
-watch(
-  () => aiResponseStore.currentGeneratedNotes,
-  (newVal) => {
-    typeWriterEffect(newVal)
-  }
-)
-
-onUnmounted(() => {
-  if (typewriterInterval !== null) {
-    clearInterval(typewriterInterval)
-  }
-  // Consider if aiResponseStore.clearAiData() should be called here
-  // depending on whether user should see old results if they navigate back.
 })
 </script>
 
 <style scoped>
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.animate-fade-in {
-  animation: fade-in 0.3s forwards;
-}
-.ai-response textarea {
-  resize: none;
-  overflow-y: auto;
-}
+/* Styles are now handled by the EnhancedTextDisplay component */
 </style>

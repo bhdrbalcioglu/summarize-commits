@@ -175,7 +175,8 @@ router.afterEach((to, from) => {
       : to.params.projectIdentifier
 
     // Only reset if we're navigating to a different project or away from projects entirely
-    if (fromProjectId && fromProjectId !== toProjectId) {
+    // BUT NOT when going to CommitSummaries (which displays AI results)
+    if (fromProjectId && fromProjectId !== toProjectId && to.name !== 'CommitSummaries') {
       const commitStore = useCommitStore()
       const aiResponseStore = useAiResponseStore()
       

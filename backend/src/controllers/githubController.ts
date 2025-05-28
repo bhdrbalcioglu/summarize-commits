@@ -13,9 +13,6 @@ const getActualUserGitHubAccessToken = async (
       "github"
     );
     if (token) {
-      console.log(
-        "[GitHub Controller] Using ACTUAL GitHub Access Token from authService."
-      );
       return token;
     } else {
       console.error(
