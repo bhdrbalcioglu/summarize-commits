@@ -4,6 +4,7 @@ import { useAuthStore } from './authStore'
 import apiClient from '@/services/apiService'
 import type { Group } from '@/types/group'
 import { GLOBAL_KEYS, getStorageValue, setStorageValue, removeStorageValue } from '@/utils/localStorage'
+import { useProjectListStore } from './projectListStore'
 
 export interface GroupState {
   groups: Group[]

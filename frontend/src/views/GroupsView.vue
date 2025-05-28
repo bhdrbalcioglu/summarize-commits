@@ -26,11 +26,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/authStore'
-import { useGroupStore, type Group } from '../stores/groupStore'
-import SkeletonTable from '../components/SkeletonTable.vue'
-import DataTable from '../components/groups/DataTable.vue'
-import { columns } from '../components/groups/columns'
+import { useAuthStore } from '@/stores/authStore'
+import { useGroupStore } from '@/stores/groupStore'
+import type { Group } from '@/types/group'
+import SkeletonTable from '@/components/SkeletonTable.vue'
+import DataTable from '@/components/groups/DataTable.vue'
+import { columns } from '@/components/groups/columns'
 import { useEventBus } from '@/utils/eventBus'
 
 const router = useRouter()
@@ -86,7 +87,7 @@ const retryFetchGroups = () => {
 
 onMounted(() => {
   initializeEventListeners()
-  
+
   if (authStore.isUserAuthenticated && authStore.currentProvider) {
     groupStore.fetchGroups()
   }

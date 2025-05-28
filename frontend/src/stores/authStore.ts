@@ -78,6 +78,20 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    async loginWithProvider(provider: AuthProvider): Promise<void> {
+      this.isLoading = true
+      try {
+        // Redirect to backend OAuth endpoint
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
+        window.location.href = `${baseUrl}/api/auth/login/${provider}`
+      } catch (error) {
+        console.error(`Failed to initiate ${provider} login:`, error)
+        this.isLoading = false
+        throw error
+      }
+      // Note: isLoading will remain true until page redirects or user returns
+    },
+
     async fetchCurrentUser(): Promise<boolean> {
       this.isLoading = true
       try {
