@@ -57,7 +57,7 @@ export interface CommitState {
 export const useCommitStore = defineStore('commit', {
   state: (): CommitState => ({
     branches: [],
-    selectedBranchName: localStorage.getItem('selectedBranchName') || null,
+    selectedBranchName: null,
     commits: [],
     selectedCommitIdsForAI: [],
     // commitBundlesForAI: [], // AI analysis results will be in aiResponseStore
@@ -145,10 +145,7 @@ export const useCommitStore = defineStore('commit', {
       // this.commitBundlesForAI = []; // AI results handled by aiResponseStore
 
       if (branchName) {
-        localStorage.setItem('selectedBranchName', branchName)
         this.fetchCommitsForCurrentBranch()
-      } else {
-        localStorage.removeItem('selectedBranchName')
       }
     },
 
@@ -296,7 +293,6 @@ export const useCommitStore = defineStore('commit', {
     resetCommitState() {
       this.branches = []
       this.selectedBranchName = null
-      localStorage.removeItem('selectedBranchName')
       this.commits = []
       this.selectedCommitIdsForAI = []
       this.isLoadingBranches = false

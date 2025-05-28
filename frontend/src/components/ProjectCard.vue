@@ -1,3 +1,4 @@
+<!-- frontend\src\components\ProjectCard.vue -->
 <template>
   <div class="project-card-container w-full">
     <div v-if="isLoading || !projectData" class="w-full">

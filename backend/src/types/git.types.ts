@@ -10,6 +10,10 @@ export interface User {
   avatar_url: string;
   web_url?: string; // Link to user's profile on the provider
   email?: string | null; // May not always be available or public
+  // OAuth token storage
+  providerAccessToken?: string; // Store the OAuth access token for API calls
+  providerRefreshToken?: string; // Store refresh token if available
+  tokenUpdatedAt?: Date; // Track when tokens were last updated
 }
 
 export interface ProjectNamespace {

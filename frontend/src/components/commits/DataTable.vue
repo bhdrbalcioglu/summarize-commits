@@ -1,3 +1,4 @@
+<!-- frontend\src\components\commits\DataTable.vue -->
 <template>
   <div class="border rounded-md overflow-x-auto">
     <Table>
@@ -47,7 +48,7 @@
 
 <script setup lang="ts" generic="TData extends Commit">
 // Removed TValue as it wasn't explicitly used and TData covers Commit
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, withDefaults } from 'vue'
 import {
   useVueTable,
   getCoreRowModel,
@@ -65,10 +66,15 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '.
 import type { Commit } from '../../types/commit'
 import { columns as defineColumnsFunction } from './columns'
 
-const props = defineProps<{
-  commits: TData[]
-  selectedCommitIds: string[]
-}>()
+const props = withDefaults(
+  defineProps<{
+    commits: TData[]
+    selectedCommitIds: string[]
+  }>(),
+  {
+    selectedCommitIds: () => []
+  }
+)
 
 const emit = defineEmits<{
   (e: 'toggleSelection', commitId: string): void
@@ -150,6 +156,8 @@ watch(
 watch(
   () => props.selectedCommitIds,
   (newSelectedIds) => {
+    if (!newSelectedIds || !Array.isArray(newSelectedIds)) return
+
     const newRowSelectionState: RowSelectionState = {}
     // Use table.value to access the table instance
     table.getRowModel().rows.forEach((row) => {
@@ -167,10 +175,12 @@ watch(
   (newCommits) => {
     // When commits prop changes, re-sync the selection state
     const newRowSelectionState: RowSelectionState = {}
+    const selectedIds = props.selectedCommitIds || []
+
     // Use table.value here as well
     const currentRows = table.getRowModel().rows
     currentRows.forEach((row) => {
-      if (props.selectedCommitIds.includes(row.original.id)) {
+      if (selectedIds.includes(row.original.id)) {
         newRowSelectionState[row.id] = true
       }
     })

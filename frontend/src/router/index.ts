@@ -122,8 +122,8 @@ router.beforeEach(async (to, from, next) => {
     next({ name: 'Home', query: { redirect: to.fullPath } }) // Save redirect path
   } else if (guestOnly && authStore.isUserAuthenticated) {
     // If route is for guests only (like Home/Login page) and user IS authenticated,
-    // redirect to a default authenticated page, e.g., 'Groups' or 'ProjectsView'.
-    next({ name: 'Groups' }) // Or your main authenticated landing page
+    // redirect to the User page regardless of provider.
+    next({ name: 'User' })
   } else {
 
     next()

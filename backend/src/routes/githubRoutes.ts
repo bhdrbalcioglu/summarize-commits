@@ -29,6 +29,9 @@ router.get("/user/orgs", getUserOrganizations);
 // Query params: orgLogin, orderBy, sort, search, page, perPage
 router.get("/repos", getRepositories); // Or /user/repos and /orgs/:orgLogin/repos for more explicitness
 
+// Add /projects route that maps to the same getRepositories function for frontend compatibility
+router.get("/projects", getRepositories); // Frontend expects this endpoint
+
 // To explicitly list repos for an organization (if you prefer separate routes)
 // router.get("/orgs/:orgLogin/repos", getRepositories); // Controller would need to handle orgLogin from params
 

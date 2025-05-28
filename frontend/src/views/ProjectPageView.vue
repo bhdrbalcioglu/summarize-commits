@@ -1,3 +1,4 @@
+<!-- frontend\src\views\ProjectPageView.vue -->
 <template>
   <div class="bg-gray-50 min-h-screen flex flex-col md:flex-row">
     <div class="w-full md:w-72 lg:w-80 xl:w-96 bg-white border-r border-gray-200 p-4 md:p-6 flex-shrink-0">
@@ -21,7 +22,7 @@
 
 <script setup lang="ts">
 import { onMounted, watch, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { useProjectStore } from '../stores/projectStore'
 import { useCommitStore } from '../stores/commitStore' // Import if resetting on project change
@@ -61,6 +62,8 @@ const retryFetchProjectDetails = () => {
 }
 
 onMounted(async () => {
+  console.log('onMounted', 'showing project details for project:', projectIdentifierFromRoute.value)
+  console.log('Project Store:', projectStore.currentProject)
   await fetchProjectData()
   // Default to commits view if project is loaded and no child route is active
   // and if we are not already on a child route of ProjectPage

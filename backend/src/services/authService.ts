@@ -9,8 +9,6 @@ import {
   OAuthUserProfile,
 } from "../types/index.js";
 
-const MOCK_USER_DB: User[] = [];
-
 // generateToken - (remains the same as your last version)
 export const generateToken = (payload: UserJwtPayload): string => {
   if (!environment.jwt.secret) {
@@ -68,10 +66,11 @@ export const verifyToken = (token: string): UserJwtPayload => {
 };
 
 interface StoredUser extends User {
-  providerAccessTokens?: Partial<Record<GitProvider, string>>; // Provider tokenlarını saklamak için
+  // Remove the old providerAccessTokens field since we're now using the fields in User interface
 }
 const usersStore: StoredUser[] = []; // Basit in-memory store
-// findOrCreateUserFromOAuth - (remains the same as your last version)
+
+// findOrCreateUserFromOAuth - Updated to store OAuth tokens
 export const findOrCreateUserFromOAuth = async (
   provider: GitProvider,
   oauthProfile: OAuthUserProfile,
@@ -82,14 +81,21 @@ export const findOrCreateUserFromOAuth = async (
       oauthProfile.id
     }, Token: ${providerAccessToken ? "RECEIVED" : "MISSING"}`
   );
+
   let appUser = usersStore.find(
     (u) => u.provider === provider && u.id === oauthProfile.id // ID'ler string veya number olabilir, dikkat!
   );
+
   if (appUser) {
+    // Update existing user with new profile data and token
     appUser.name = oauthProfile.name || oauthProfile.username;
     appUser.avatar_url = oauthProfile.avatar_url || "";
     appUser.email = oauthProfile.email || null;
+    appUser.providerAccessToken = providerAccessToken; // Store the OAuth token
+    appUser.tokenUpdatedAt = new Date(); // Track when token was updated
+    console.log("[AuthService] Updated existing user with new token");
   } else {
+    // Create new user with OAuth token
     appUser = {
       id: oauthProfile.id,
       provider: provider,
@@ -102,10 +108,19 @@ export const findOrCreateUserFromOAuth = async (
         (provider === "gitlab"
           ? `https://gitlab.com/${oauthProfile.username}`
           : `https://github.com/${oauthProfile.username}`),
+      providerAccessToken: providerAccessToken, // Store the OAuth token
+      tokenUpdatedAt: new Date(), // Track when token was created
     };
-    MOCK_USER_DB.push(appUser);
+    usersStore.push(appUser); // Use usersStore instead of MOCK_USER_DB
+    console.log("[AuthService] Created new user with OAuth token");
   }
-  console.log("[AuthService - MOCK]: Found or created user:", appUser);
+
+  console.log("[AuthService]: Found or created user:", {
+    ...appUser,
+    providerAccessToken: appUser.providerAccessToken
+      ? "***STORED***"
+      : "MISSING",
+  });
   return appUser;
 };
 
@@ -114,41 +129,44 @@ export const getAppUserByIdAndProvider = async (
   provider: GitProvider
 ): Promise<User | null> => {
   console.log(
-    `[AuthService - MOCK]: Attempting to find user with ID ${userId} for provider ${provider}`
+    `[AuthService]: Attempting to find user with ID ${userId} for provider ${provider}`
   );
-  const user = MOCK_USER_DB.find(
+  const user = usersStore.find(
     (u) => String(u.id) === String(userId) && u.provider === provider
   );
   if (!user) {
     console.log(
-      `[AuthService - MOCK]: User not found with ID ${userId} for provider ${provider}`
+      `[AuthService]: User not found with ID ${userId} for provider ${provider}`
     );
     return null;
   }
-  console.log(`[AuthService - MOCK]: Found user:`, user);
+  console.log(`[AuthService]: Found user:`, {
+    ...user,
+    providerAccessToken: user.providerAccessToken ? "***STORED***" : "MISSING",
+  });
   return user;
 };
+
 export const getProviderAccessTokenForUser = async (
-  userId: string | number, // Bu senin appUser.id'n olmalı
+  userId: string | number,
   provider: GitProvider
 ): Promise<string | undefined> => {
   console.log(
     `[AuthService] Attempting to retrieve ${provider} token for user ID: ${userId}`
   );
   const user = usersStore.find(
-    (u) => u.id === userId && u.provider === provider
-  ); // Provider'ı da kontrol et
-  if (
-    user &&
-    user.providerAccessTokens &&
-    user.providerAccessTokens[provider]
-  ) {
+    (u) => String(u.id) === String(userId) && u.provider === provider
+  );
+
+  if (user && user.providerAccessToken) {
     console.log(`[AuthService] Found ${provider} token for user ID: ${userId}`);
-    return user.providerAccessTokens[provider];
+    return user.providerAccessToken;
   }
+
   console.warn(
-    `[AuthService] No ${provider} token found for user ID: ${userId}`
+    `[AuthService] No ${provider} token found for user ID: ${userId}. User exists: ${!!user}, Token exists: ${!!user?.providerAccessToken}`
   );
   return undefined;
 };
+
 // ... (getAppUserByIdAndProvider ve generateToken/verifyToken aynı kalabilir)

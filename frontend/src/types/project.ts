@@ -11,7 +11,7 @@ export interface Project {
   id: string | number
   provider: GitProvider
   name: string
-  path_with_namespace: string
+    path_with_namespace: string
   description: string | null
   web_url: string
   default_branch: string | null

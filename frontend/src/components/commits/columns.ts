@@ -60,7 +60,8 @@ export const columns = (
       ),
   },
   {
-    accessorKey: "author_name",
+    accessorFn: (row) => row.author?.name || "Unknown",
+    id: "author_name",
     header: () => {
       return h(AuthorFilterHeader, {
         selectedAuthors: selectedAuthors.value,
@@ -70,11 +71,12 @@ export const columns = (
         },
       });
     },
-    cell: ({ row }) => row.getValue("author_name"),
-    filterFn: authorFilterFn, // Use the built-in filter function
+    cell: ({ row }) => row.getValue("author_name") || "Unknown",
+    filterFn: authorFilterFn,
   },
   {
-    accessorKey: "created_at",
+    accessorFn: (row) => row.authored_date,
+    id: "authored_date",
     header: ({ column }: { column: any }) => {
       return h(
         Button,
@@ -87,15 +89,24 @@ export const columns = (
       );
     },
     cell: ({ row }: { row: any }) => {
-      const date = new Date(row.getValue("created_at"));
-      return date.toLocaleString();
+      const dateStr = row.getValue("authored_date");
+      if (!dateStr) return "Unknown";
+      try {
+        const date = new Date(dateStr);
+        return date.toLocaleString();
+      } catch (e) {
+        return "Invalid Date";
+      }
     },
   },
   {
     accessorKey: "web_url",
     header: "Actions",
-    cell: ({ row }: { row: any }) =>
-      h(
+    cell: ({ row }: { row: any }) => {
+      const commit = row.original as Commit;
+      const provider = commit.provider || 'provider';
+      const providerName = provider.charAt(0).toUpperCase() + provider.slice(1);
+      return h(
         "a",
         {
           href: row.getValue("web_url"),
@@ -103,7 +114,8 @@ export const columns = (
           rel: "noopener noreferrer",
           class: "text-blue-600 hover:text-blue-800",
         },
-        "View on GitLab"
-      ),
+        `View on ${providerName}`
+      );
+    },
   },
 ];

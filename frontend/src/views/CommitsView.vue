@@ -1,3 +1,4 @@
+<!-- frontend\src\views\CommitsView.vue -->
 <template>
   <div class="bg-gray-50 min-h-screen flex flex-col md:flex-row">
     <!-- Project Card: Assuming it's part of ProjectPageView layout, not directly here -->
@@ -42,7 +43,7 @@
 
         <div v-if="commitStore.isLoadingCommits && commitStore.commits.length === 0" class="text-center py-4"><i class="fas fa-spinner fa-spin text-xl text-gray-500"></i> Loading commits...</div>
         <div v-else-if="commitStore.errorCommits" class="my-4 p-3 bg-red-100 text-red-600 rounded-md">Error loading commits: {{ commitStore.errorCommits }}</div>
-        <DataTable v-else-if="projectStore.activeProject && commitStore.selectedBranchName" :commits="commitStore.commits" :selectedCommits="commitStore.selectedCommitIdsForAI" @toggle-selection="handleToggleCommitSelection" />
+        <DataTable v-else-if="projectStore.activeProject && commitStore.selectedBranchName" :commits="commitStore.commits" :selectedCommitIds="commitStore.selectedCommitIdsForAI" @toggle-selection="handleToggleCommitSelection" />
         <div v-else-if="projectStore.activeProject && !commitStore.selectedBranchName && !commitStore.isLoadingBranches" class="text-center py-4 text-gray-500">Please select a branch to view commits.</div>
 
         <div class="mt-4 flex justify-center">
@@ -59,7 +60,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { useProjectStore } from '../stores/projectStore'
 import { useCommitStore } from '../stores/commitStore'
@@ -119,6 +120,12 @@ const initializeViewData = async () => {
   isLoadingInitialData.value = false
 }
 
+// Clean up commit store when leaving the route
+onBeforeRouteLeave(() => {
+  commitStore.resetCommitState()
+  aiResponseStore.resetAiState()
+})
+
 onMounted(() => {
   initializeViewData()
 })
@@ -144,6 +151,25 @@ watch(
       projectStore.resetProjectState()
     }
   }
+)
+
+// Watch for project changes - when project is loaded, initialize commit data
+watch(
+  () => projectStore.activeProject,
+  (newProject) => {
+    if (newProject && authStore.isUserAuthenticated) {
+      // Initialize commit data when project becomes available
+      if (commitStore.branches.length === 0 && !commitStore.isLoadingBranches) {
+        commitStore.fetchBranchesForProject()
+      } else if (commitStore.selectedBranchName && commitStore.commits.length === 0 && !commitStore.isLoadingCommits) {
+        commitStore.fetchCommitsForCurrentBranch()
+      }
+      isLoadingInitialData.value = false
+    } else if (!newProject) {
+      isLoadingInitialData.value = true
+    }
+  },
+  { immediate: true }
 )
 
 const handleLanguageChange = (event: Event) => {

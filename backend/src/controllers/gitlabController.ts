@@ -2,18 +2,32 @@
 import { Request, Response, NextFunction } from "express";
 import * as gitlabService from "../services/gitlabService.js";
 import { ProjectListParams } from "../types/index.js"; // Or directly from git.types.js
+import { getProviderAccessTokenForUser } from "../services/authService.js";
 
-// TODO: Replace this with a secure way to retrieve the user's actual GitLab access token
-// This would typically involve fetching it from a secure backend store based on req.auth.userId
-const getMockUserGitLabAccessToken = (req: Request): string | undefined => {
-  if (req.auth?.provider === "gitlab") {
-    // In a real scenario, you'd look up the stored token for req.auth.providerUserId
-    // For now, using a placeholder. This will NOT work with the actual GitLab API.
-    console.warn(
-      "[STUB] Using MOCK GitLab Access Token in gitlabController. Ensure this is replaced!"
+// Get the actual user's GitLab access token from the stored user data
+const getActualUserGitLabAccessToken = async (
+  req: Request
+): Promise<string | undefined> => {
+  if (req.auth?.provider === "gitlab" && req.auth.userId) {
+    const token = await getProviderAccessTokenForUser(
+      req.auth.userId,
+      "gitlab"
     );
-    return "mock_gitlab_access_token_for_" + req.auth.providerUserId; // Placeholder
+    if (token) {
+      console.log(
+        "[GitLab Controller] Using ACTUAL GitLab Access Token from authService."
+      );
+      return token;
+    } else {
+      console.error(
+        `🔴 [GitLab Controller] GitLab Access Token NOT FOUND in authService for user ${req.auth.userId}`
+      );
+      return undefined;
+    }
   }
+  console.error(
+    "🔴 [GitLab Controller] Cannot get GitLab access token: req.auth is missing or provider is not gitlab."
+  );
   return undefined;
 };
 
@@ -23,7 +37,7 @@ export const getUserGroups = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const accessToken = getMockUserGitLabAccessToken(req);
+    const accessToken = await getActualUserGitLabAccessToken(req);
     if (!accessToken) {
       res.status(403).json({
         message: "User is not authenticated with GitLab or token is missing.",
@@ -43,7 +57,7 @@ export const getProjects = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const accessToken = getMockUserGitLabAccessToken(req);
+    const accessToken = await getActualUserGitLabAccessToken(req);
     if (!accessToken) {
       res.status(403).json({
         message: "User is not authenticated with GitLab or token is missing.",
@@ -79,7 +93,7 @@ export const getProjectDetails = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const accessToken = getMockUserGitLabAccessToken(req);
+    const accessToken = await getActualUserGitLabAccessToken(req);
     if (!accessToken) {
       res.status(403).json({
         message: "User is not authenticated with GitLab or token is missing.",
@@ -107,7 +121,7 @@ export const getProjectBranches = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const accessToken = getMockUserGitLabAccessToken(req);
+    const accessToken = await getActualUserGitLabAccessToken(req);
     if (!accessToken) {
       res.status(403).json({
         message: "User is not authenticated with GitLab or token is missing.",
@@ -135,7 +149,7 @@ export const getProjectCommits = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const accessToken = getMockUserGitLabAccessToken(req);
+    const accessToken = await getActualUserGitLabAccessToken(req);
     if (!accessToken) {
       res.status(403).json({
         message: "User is not authenticated with GitLab or token is missing.",
@@ -179,7 +193,7 @@ export const getCommitDetailsAndDiffs = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const accessToken = getMockUserGitLabAccessToken(req);
+    const accessToken = await getActualUserGitLabAccessToken(req);
     if (!accessToken) {
       res.status(403).json({
         message: "User is not authenticated with GitLab or token is missing.",
@@ -210,7 +224,7 @@ export const getProjectCommitBundlesForAI = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const accessToken = getMockUserGitLabAccessToken(req);
+    const accessToken = await getActualUserGitLabAccessToken(req);
     if (!accessToken) {
       res.status(403).json({
         message: "User is not authenticated with GitLab or token is missing.",
@@ -250,7 +264,7 @@ export const getProjectFileTree = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const accessToken = getMockUserGitLabAccessToken(req);
+    const accessToken = await getActualUserGitLabAccessToken(req);
     if (!accessToken) {
       res.status(403).json({
         message: "User is not authenticated with GitLab or token is missing.",
@@ -282,7 +296,7 @@ export const getFileContent = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const accessToken = getMockUserGitLabAccessToken(req);
+    const accessToken = await getActualUserGitLabAccessToken(req);
     if (!accessToken) {
       res.status(403).json({
         message: "User is not authenticated with GitLab or token is missing.",

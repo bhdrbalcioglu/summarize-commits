@@ -1,3 +1,4 @@
+<!-- frontend\src\views\ProjectsView.vue -->
 <template>
   <div class="p-6 bg-gray-50 min-h-screen">
     <h5 class="text-2xl font-semibold mb-6 text-gray-800">

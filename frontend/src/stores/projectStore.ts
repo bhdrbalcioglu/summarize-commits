@@ -30,6 +30,7 @@ export const useProjectStore = defineStore('project', {
 
     async fetchProjectDetails(identifier: string | number) {
       const authStore = useAuthStore()
+      
       if (!authStore.isUserAuthenticated || !authStore.currentProvider) {
         this.error = 'User not authenticated or provider not set.'
         this.currentProject = null
@@ -73,7 +74,7 @@ export const useProjectStore = defineStore('project', {
       } catch (err: any) {
         this.error = err.response?.data?.message || err.message || 'Failed to fetch project details.'
         this.currentProject = null
-        console.error(`Error fetching project details for ${identifier}:`, err)
+        console.error(`[ProjectStore] Error fetching project details for ${identifier}:`, err)
       } finally {
         this.isLoading = false
       }

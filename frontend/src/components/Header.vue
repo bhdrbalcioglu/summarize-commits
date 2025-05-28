@@ -14,9 +14,6 @@
             <span v.else>Login with GitHub</span>
           </Button>
         </div>
-        <div v-if="authStore.error" class="mt-3 text-center text-red-500 text-sm">
-          {{ authStore.error }}
-        </div>
         <div class="flex justify-center mt-6">
           <Button variant="outline" class="py-2 px-4 rounded-lg" @click="toggleModal"> Cancel </Button>
         </div>
