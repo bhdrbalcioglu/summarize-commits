@@ -4,47 +4,52 @@ import { useAuthStore } from './authStore'
 import apiClient from '@/services/apiService'
 import type { Project } from '@/types/project' // Ensure this matches backend's Project type
 
+export type ProjectStatus = 'idle' | 'loading' | 'ready' | 'error'
+
 export interface ProjectState {
   currentProject: Project | null
-  isLoading: boolean
-  error: string | null
+  status: ProjectStatus
+  errorMsg: string | null
 }
 
 export const useProjectStore = defineStore('project', {
   state: (): ProjectState => ({
     currentProject: null,
-    isLoading: false,
-    error: null
+    status: 'idle' as ProjectStatus,
+    errorMsg: null
   }),
   getters: {
     activeProject: (state): Project | null => state.currentProject,
-    isLoadingProject: (state): boolean => state.isLoading,
-    projectError: (state): string | null => state.error
+    isLoading: (state): boolean => state.status === 'loading',
+    isLoadingProject: (state): boolean => state.status === 'loading', // Keep for backward compatibility
+    error: (state): string | null => state.errorMsg, // Keep for backward compatibility
+    projectError: (state): string | null => state.errorMsg
   },
   actions: {
     setProject(project: Project | null) {
       this.currentProject = project
-      this.isLoading = false
-      this.error = null
+      this.status = project ? 'ready' : 'idle'
+      this.errorMsg = null
     },
 
-    async fetchProjectDetails(identifier: string | number) {
+    async selectProject(identifier: string): Promise<boolean> {
+      this.status = 'loading'
+      this.errorMsg = null
+
       const authStore = useAuthStore()
       
       if (!authStore.isUserAuthenticated || !authStore.currentProvider) {
-        this.error = 'User not authenticated or provider not set.'
+        this.errorMsg = 'User not authenticated or provider not set.'
         this.currentProject = null
-        return
+        this.status = 'error'
+        return false
       }
       if (!identifier) {
-        this.error = 'Project identifier is required.'
+        this.errorMsg = 'Project identifier is required.'
         this.currentProject = null
-        return
+        this.status = 'error'
+        return false
       }
-
-      this.isLoading = true
-      this.error = null
-      // this.currentProject = null; // Optionally clear while fetching
 
       try {
         const provider = authStore.currentProvider
@@ -53,43 +58,55 @@ export const useProjectStore = defineStore('project', {
         if (provider === 'gitlab') {
           endpoint = `/gitlab/projects/${identifier}`
         } else if (provider === 'github') {
-          // Assumes 'identifier' for GitHub is "owner/repoName"
           if (String(identifier).includes('/')) {
             endpoint = `/github/repos/${identifier}`
           } else {
-            this.error = 'Invalid identifier for GitHub project. Expected "owner/repoName".'
-            this.isLoading = false
+            this.errorMsg = 'Invalid identifier for GitHub project. Expected "owner/repoName".'
             this.currentProject = null
-            return
+            this.status = 'error'
+            return false
           }
         } else {
-          this.error = 'Unsupported provider.'
-          this.isLoading = false
+          this.errorMsg = 'Unsupported provider.'
           this.currentProject = null
-          return
+          this.status = 'error'
+          return false
         }
 
         const response = await apiClient.get<Project>(endpoint)
         this.currentProject = response.data
+        this.status = 'ready'
+        return true
       } catch (err: any) {
-        this.error = err.response?.data?.message || err.message || 'Failed to fetch project details.'
+        this.errorMsg = err.response?.data?.message || err.message || 'Failed to fetch project details.'
         this.currentProject = null
+        this.status = 'error'
         console.error(`[ProjectStore] Error fetching project details for ${identifier}:`, err)
-      } finally {
-        this.isLoading = false
+        return false
       }
+    },
+
+    async fetchProjectDetails(identifier: string | number) {
+      // Keep this method for backward compatibility, but delegate to selectProject
+      return await this.selectProject(String(identifier))
     },
 
     clearProjectDetails() {
       this.currentProject = null
-      this.isLoading = false
-      this.error = null
+      this.status = 'idle'
+      this.errorMsg = null
     },
 
     resetProjectState() {
       this.currentProject = null
-      this.isLoading = false
-      this.error = null
+      this.status = 'idle'
+      this.errorMsg = null
+    },
+
+    $reset() {
+      this.currentProject = null
+      this.status = 'idle'
+      this.errorMsg = null
     }
   }
 })

@@ -6,6 +6,8 @@ import apiClient from '@/services/apiService'
 // Assuming types align with backend definitions (backend/src/types/git.types.ts)
 import type { Branch, Commit, BackendCommitBundleItem, CommitDetail } from '@/types/commit' // Adjust path if necessary
 
+export type CommitStatus = 'idle' | 'loading' | 'ready' | 'error'
+
 // For pagination and filtering of commits, similar to backend's CommitListParams
 export interface FetchCommitsParams {
   branch?: string | null
@@ -38,9 +40,9 @@ export interface CommitState {
   selectedCommitIdsForAI: string[]
   // commitBundlesForAI: BackendCommitBundleItem[]; // Store result from AI analysis in aiResponseStore
 
-  isLoadingBranches: boolean
-  isLoadingCommits: boolean
-  isLoadingCommitBundles: boolean // For preparing bundles TO SEND to AI
+  statusBranches: CommitStatus
+  statusCommits: CommitStatus
+  statusCommitBundles: CommitStatus
 
   currentPage: number
   perPage: number
@@ -49,9 +51,9 @@ export interface CommitState {
   sinceDate: string | null
   untilDate: string | null
 
-  errorBranches: string | null
-  errorCommits: string | null
-  errorCommitBundles: string | null
+  errorMsgBranches: string | null
+  errorMsgCommits: string | null
+  errorMsgCommitBundles: string | null
 }
 
 export const useCommitStore = defineStore('commit', {
@@ -62,9 +64,9 @@ export const useCommitStore = defineStore('commit', {
     selectedCommitIdsForAI: [],
     // commitBundlesForAI: [], // AI analysis results will be in aiResponseStore
 
-    isLoadingBranches: false,
-    isLoadingCommits: false,
-    isLoadingCommitBundles: false,
+    statusBranches: 'idle' as CommitStatus,
+    statusCommits: 'idle' as CommitStatus,
+    statusCommitBundles: 'idle' as CommitStatus,
 
     currentPage: 1,
     perPage: 20,
@@ -73,15 +75,22 @@ export const useCommitStore = defineStore('commit', {
     sinceDate: null,
     untilDate: null,
 
-    errorBranches: null,
-    errorCommits: null,
-    errorCommitBundles: null
+    errorMsgBranches: null,
+    errorMsgCommits: null,
+    errorMsgCommitBundles: null
   }),
   getters: {
     activeBranch: (state): Branch | null => {
       if (!state.selectedBranchName) return null
       return state.branches.find((b) => b.name === state.selectedBranchName) || null
-    }
+    },
+    // Backward compatibility getters
+    isLoadingBranches: (state): boolean => state.statusBranches === 'loading',
+    isLoadingCommits: (state): boolean => state.statusCommits === 'loading',
+    isLoadingCommitBundles: (state): boolean => state.statusCommitBundles === 'loading',
+    errorBranches: (state): string | null => state.errorMsgBranches,
+    errorCommits: (state): string | null => state.errorMsgCommits,
+    errorCommitBundles: (state): string | null => state.errorMsgCommitBundles
   },
   actions: {
     // --- BRANCH MANAGEMENT ---
@@ -90,12 +99,15 @@ export const useCommitStore = defineStore('commit', {
       const authStore = useAuthStore()
 
       if (!authStore.isUserAuthenticated || !projectStore.activeProject?.id || !authStore.currentProvider) {
-        this.errorBranches = 'Authentication or Project ID missing for fetching branches.'
+        this.errorMsgBranches = 'Authentication or Project ID missing for fetching branches.'
         this.branches = []
+        this.statusBranches = 'error'
         return
       }
-      this.isLoadingBranches = true
-      this.errorBranches = null
+      
+      this.statusBranches = 'loading'
+      this.errorMsgBranches = null
+      
       try {
         const provider = authStore.currentProvider
         const projectIdentifier = projectStore.activeProject.id // For GitLab
@@ -112,6 +124,7 @@ export const useCommitStore = defineStore('commit', {
 
         const response = await apiClient.get<Branch[]>(endpoint)
         this.branches = response.data
+        this.statusBranches = 'ready'
 
         const currentSelectedBranchExists = this.selectedBranchName && this.branches.some((b) => b.name === this.selectedBranchName)
         if (!currentSelectedBranchExists && this.branches.length > 0) {
@@ -126,10 +139,9 @@ export const useCommitStore = defineStore('commit', {
           }
         }
       } catch (err: any) {
-        this.errorBranches = err.response?.data?.message || err.message || 'Failed to fetch branches.'
+        this.errorMsgBranches = err.response?.data?.message || err.message || 'Failed to fetch branches.'
         this.branches = []
-      } finally {
-        this.isLoadingBranches = false
+        this.statusBranches = 'error'
       }
     },
 
@@ -143,6 +155,7 @@ export const useCommitStore = defineStore('commit', {
       this.totalCommits = 0
       this.selectedCommitIdsForAI = []
       // this.commitBundlesForAI = []; // AI results handled by aiResponseStore
+      this.statusCommits = 'idle'
 
       if (branchName) {
         this.fetchCommitsForCurrentBranch()
@@ -169,6 +182,7 @@ export const useCommitStore = defineStore('commit', {
         this.currentPage = 1
         this.commits = []
         this.isMoreCommits = true
+        this.statusCommits = 'idle'
         this.fetchCommitsForCurrentBranch()
       }
     },
@@ -178,14 +192,15 @@ export const useCommitStore = defineStore('commit', {
       const authStore = useAuthStore()
 
       if (!authStore.isUserAuthenticated || !projectStore.activeProject?.id || !this.selectedBranchName || !authStore.currentProvider) {
-        this.errorCommits = 'Cannot fetch commits: Missing auth, project, branch, or provider.'
+        this.errorMsgCommits = 'Cannot fetch commits: Missing auth, project, branch, or provider.'
         if (!loadMore) this.commits = [] // Clear if it's a fresh load attempt
+        this.statusCommits = 'error'
         return
       }
-      if (this.isLoadingCommits) return
+      if (this.statusCommits === 'loading') return
 
-      this.isLoadingCommits = true
-      this.errorCommits = null
+      this.statusCommits = 'loading'
+      this.errorMsgCommits = null
 
       if (!loadMore) {
         this.currentPage = 1
@@ -226,15 +241,15 @@ export const useCommitStore = defineStore('commit', {
         if (response.data.currentPage !== undefined) {
           this.currentPage = response.data.currentPage
         }
+        this.statusCommits = 'ready'
       } catch (err: any) {
-        this.errorCommits = err.response?.data?.message || err.message || 'Failed to fetch commits.'
-      } finally {
-        this.isLoadingCommits = false
+        this.errorMsgCommits = err.response?.data?.message || err.message || 'Failed to fetch commits.'
+        this.statusCommits = 'error'
       }
     },
 
     loadMoreCommits() {
-      if (this.isMoreCommits && !this.isLoadingCommits) {
+      if (this.isMoreCommits && this.statusCommits !== 'loading') {
         this.currentPage++
         this.fetchCommitsForCurrentBranch(true)
       }
@@ -255,11 +270,14 @@ export const useCommitStore = defineStore('commit', {
       const authStore = useAuthStore()
 
       if (!authStore.isUserAuthenticated || !projectStore.activeProject?.id || this.selectedCommitIdsForAI.length === 0 || !authStore.currentProvider) {
-        this.errorCommitBundles = 'Missing data for preparing commit bundles.'
-        throw new Error(this.errorCommitBundles)
+        this.errorMsgCommitBundles = 'Missing data for preparing commit bundles.'
+        this.statusCommitBundles = 'error'
+        throw new Error(this.errorMsgCommitBundles)
       }
-      this.isLoadingCommitBundles = true
-      this.errorCommitBundles = null
+      
+      this.statusCommitBundles = 'loading'
+      this.errorMsgCommitBundles = null
+      
       try {
         const provider = authStore.currentProvider
         const projectIdentifier = projectStore.activeProject.id // GitLab ID
@@ -277,12 +295,12 @@ export const useCommitStore = defineStore('commit', {
         // The request body to the backend expects { commitIds: string[] }
         const response = await apiClient.post<BackendCommitBundleItem[]>(endpoint, { commitIds: this.selectedCommitIdsForAI })
         // This action returns the bundles; aiResponseStore will call this and then send to AI backend.
+        this.statusCommitBundles = 'ready'
         return response.data
       } catch (err: any) {
-        this.errorCommitBundles = err.response?.data?.message || err.message || 'Failed to prepare commit bundles.'
+        this.errorMsgCommitBundles = err.response?.data?.message || err.message || 'Failed to prepare commit bundles.'
+        this.statusCommitBundles = 'error'
         throw err
-      } finally {
-        this.isLoadingCommitBundles = false
       }
     },
 
@@ -295,18 +313,22 @@ export const useCommitStore = defineStore('commit', {
       this.selectedBranchName = null
       this.commits = []
       this.selectedCommitIdsForAI = []
-      this.isLoadingBranches = false
-      this.isLoadingCommits = false
-      this.isLoadingCommitBundles = false
+      this.statusBranches = 'idle'
+      this.statusCommits = 'idle'
+      this.statusCommitBundles = 'idle'
       this.currentPage = 1
       this.perPage = 20
       this.totalCommits = 0
       this.isMoreCommits = true
       this.sinceDate = null
       this.untilDate = null
-      this.errorBranches = null
-      this.errorCommits = null
-      this.errorCommitBundles = null
+      this.errorMsgBranches = null
+      this.errorMsgCommits = null
+      this.errorMsgCommitBundles = null
+    },
+
+    $reset() {
+      this.resetCommitState()
     }
   }
 })

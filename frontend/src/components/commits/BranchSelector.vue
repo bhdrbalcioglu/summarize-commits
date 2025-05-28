@@ -1,9 +1,9 @@
 <template>
   <Popover v-model:open="open">
     <PopoverTrigger as-child>
-      <Button variant="outline" role="combobox" :aria-expanded="open" class="w-[200px] justify-between" :disabled="commitStore.isLoadingBranches || commitStore.branches.length === 0">
+      <Button variant="outline" role="combobox" :aria-expanded="open" class="w-[200px] justify-between" :disabled="commitStore.statusBranches === 'loading' || commitStore.branches.length === 0">
         <span class="flex items-center truncate">
-          {{ currentSelectedBranch?.name || (commitStore.isLoadingBranches ? 'Loading...' : 'Select branch...') }}
+          {{ currentSelectedBranch?.name || (commitStore.statusBranches === 'loading' ? 'Loading...' : 'Select branch...') }}
           <Badge v-if="currentSelectedBranch?.is_default" variant="secondary" class="ml-2">Default</Badge>
         </span>
         <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />

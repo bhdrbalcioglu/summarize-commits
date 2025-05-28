@@ -12,7 +12,7 @@
         <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 space-y-4 md:space-y-0">
           <div class="w-full md:w-auto">
             <BranchSelector />
-            <div v-if="commitStore.errorBranches" class="mt-2 text-xs text-red-500">{{ commitStore.errorBranches }}</div>
+            <div v-if="commitStore.statusBranches === 'error'" class="mt-2 text-xs text-red-500">{{ commitStore.errorMsgBranches }}</div>
           </div>
 
           <div class="flex flex-col sm:flex-row items-start sm:items-center gap-x-2 gap-y-3 w-full md:w-auto mt-4 md:mt-0">
@@ -38,17 +38,17 @@
           </div>
         </div>
 
-        <div v-if="commitStore.isLoadingCommits && commitStore.commits.length === 0" class="text-center py-4"><i class="fas fa-spinner fa-spin text-xl text-gray-500"></i> Loading commits...</div>
-        <div v-else-if="commitStore.errorCommits" class="my-4 p-3 bg-red-100 text-red-600 rounded-md">Error loading commits: {{ commitStore.errorCommits }}</div>
+        <div v-if="commitStore.statusCommits === 'loading' && commitStore.commits.length === 0" class="text-center py-4"><i class="fas fa-spinner fa-spin text-xl text-gray-500"></i> Loading commits...</div>
+        <div v-else-if="commitStore.statusCommits === 'error'" class="my-4 p-3 bg-red-100 text-red-600 rounded-md">Error loading commits: {{ commitStore.errorMsgCommits }}</div>
         <DataTable v-else-if="project && commitStore.selectedBranchName" :commits="commitStore.commits" :selectedCommitIds="commitStore.selectedCommitIdsForAI" @toggle-selection="handleToggleCommitSelection" />
-        <div v-else-if="project && !commitStore.selectedBranchName && !commitStore.isLoadingBranches" class="text-center py-4 text-gray-500">Please select a branch to view commits.</div>
+        <div v-else-if="project && !commitStore.selectedBranchName && commitStore.statusBranches !== 'loading'" class="text-center py-4 text-gray-500">Please select a branch to view commits.</div>
 
         <div class="mt-4 flex justify-center">
-          <Button v-if="commitStore.isMoreCommits && project && commitStore.selectedBranchName" @click="handleLoadMoreCommits" variant="outline" :disabled="commitStore.isLoadingCommits">
-            {{ commitStore.isLoadingCommits && commitStore.commits.length > 0 ? 'Loading...' : 'Load More Commits' }}
+          <Button v-if="commitStore.isMoreCommits && project && commitStore.selectedBranchName" @click="handleLoadMoreCommits" variant="outline" :disabled="commitStore.statusCommits === 'loading'">
+            {{ commitStore.statusCommits === 'loading' && commitStore.commits.length > 0 ? 'Loading...' : 'Load More Commits' }}
           </Button>
           <span v-else-if="!commitStore.isMoreCommits && commitStore.commits.length > 0" class="text-gray-500 text-sm"> No more commits to load. </span>
-          <span v-else-if="commitStore.commits.length === 0 && !commitStore.isLoadingCommits && project && commitStore.selectedBranchName && !commitStore.errorCommits" class="text-gray-500 text-sm"> No commits found for this branch and period. </span>
+          <span v-else-if="commitStore.commits.length === 0 && commitStore.statusCommits !== 'loading' && project && commitStore.selectedBranchName && commitStore.statusCommits !== 'error'" class="text-gray-500 text-sm"> No commits found for this branch and period. </span>
         </div>
       </div>
     </div>
