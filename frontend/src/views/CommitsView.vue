@@ -56,8 +56,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, computed } from 'vue'
-import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { useProjectStore } from '../stores/projectStore'
 import { useCommitStore } from '../stores/commitStore'
@@ -74,7 +74,6 @@ const authStore = useAuthStore()
 const projectStore = useProjectStore()
 const commitStore = useCommitStore()
 const aiResponseStore = useAiResponseStore()
-const route = useRoute()
 const router = useRouter()
 
 // Use the new composable
@@ -88,21 +87,16 @@ const initializeCommitData = async () => {
   }
 
   // Initialize commit data when project is available
-  if (commitStore.branches.length === 0 && !commitStore.isLoadingBranches) {
+  if (commitStore.branches.length === 0 && commitStore.statusBranches !== 'loading') {
     await commitStore.fetchBranchesForProject()
-  } else if (commitStore.selectedBranchName && commitStore.commits.length === 0 && !commitStore.isLoadingCommits) {
+  } else if (commitStore.selectedBranchName && commitStore.commits.length === 0 && commitStore.statusCommits !== 'loading') {
     await commitStore.fetchCommitsForCurrentBranch()
   }
   isLoadingInitialData.value = false
 }
 
-// Clean up commit store when leaving the route
-onBeforeRouteLeave(() => {
-  commitStore.resetCommitState()
-  aiResponseStore.resetAiState()
-})
-
 onMounted(() => {
+  // Router guard ensures project is loaded, so initialize commit data
   if (project.value && status.value === 'ready') {
     initializeCommitData()
   }
@@ -119,17 +113,6 @@ watch(
     }
   },
   { immediate: true }
-)
-
-watch(
-  () => authStore.isUserAuthenticated,
-  (isAuth) => {
-    if (isAuth && project.value && status.value === 'ready') {
-      initializeCommitData()
-    } else if (!isAuth) {
-      commitStore.resetCommitState()
-    }
-  }
 )
 
 const handleLanguageChange = (event: Event) => {

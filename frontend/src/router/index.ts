@@ -11,6 +11,9 @@ import CommitsView from '../views/CommitsView.vue'
 import FileTreeView from '../views/FileTreeView.vue'
 import CommitSummariesView from '../views/CommitSummariesView.vue'
 import { useAuthStore } from '../stores/authStore'
+import { useCommitStore } from '../stores/commitStore'
+import { useAiResponseStore } from '../stores/aiResponseStore'
+import { loadProjectForRoute } from '../utils/projectLoader'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -70,6 +73,32 @@ const routes: Array<RouteRecordRaw> = [
     component: ProjectPageView,
     props: true, // Passes route.params.projectIdentifier as prop
     meta: { requiresAuth: true },
+    beforeEnter: async (to) => {
+      const authStore = useAuthStore()
+      
+      // Ensure user is authenticated before attempting to load project
+      if (!authStore.isUserAuthenticated) {
+        return { name: 'Home', query: { redirect: to.fullPath } }
+      }
+
+      const projectIdentifier = Array.isArray(to.params.projectIdentifier) 
+        ? to.params.projectIdentifier[0] 
+        : to.params.projectIdentifier
+
+      if (!projectIdentifier) {
+        return { name: 'User' } // Redirect to user page if no project identifier
+      }
+
+      // Load project before allowing navigation
+      const success = await loadProjectForRoute(projectIdentifier)
+      if (!success) {
+        // If project loading failed, redirect to user page
+        return { name: 'User' }
+      }
+
+      // Allow navigation to proceed
+      return true
+    },
     children: [
       {
         path: 'commits', // relative path, resolves to /project/:id/commits
@@ -125,8 +154,34 @@ router.beforeEach(async (to, from, next) => {
     // redirect to the User page regardless of provider.
     next({ name: 'User' })
   } else {
-
     next()
+  }
+})
+
+// Global afterEach hook for store cleanup
+router.afterEach((to, from) => {
+  // Reset dependent stores when navigating away from a project to a different project
+  if (
+    from.name === 'ProjectPage' || 
+    from.name === 'ProjectCommitsView' || 
+    from.name === 'ProjectFileTreeView'
+  ) {
+    const fromProjectId = Array.isArray(from.params.projectIdentifier) 
+      ? from.params.projectIdentifier[0] 
+      : from.params.projectIdentifier
+
+    const toProjectId = Array.isArray(to.params.projectIdentifier) 
+      ? to.params.projectIdentifier[0] 
+      : to.params.projectIdentifier
+
+    // Only reset if we're navigating to a different project or away from projects entirely
+    if (fromProjectId && fromProjectId !== toProjectId) {
+      const commitStore = useCommitStore()
+      const aiResponseStore = useAiResponseStore()
+      
+      commitStore.$reset()
+      aiResponseStore.resetAiState()
+    }
   }
 })
 

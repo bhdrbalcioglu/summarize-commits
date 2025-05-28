@@ -21,22 +21,16 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch, computed } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthStore } from '../stores/authStore'
 import { useProjectStore } from '../stores/projectStore'
-import { useCommitStore } from '../stores/commitStore'
-import { useAiResponseStore } from '../stores/aiResponseStore'
 import { useProjectContext } from '../composables/useProjectContext'
 import ProjectCard from '../components/ProjectCard.vue'
 import ActionSelector from '../components/ActionSelector.vue'
 
 const route = useRoute()
 const router = useRouter()
-const authStore = useAuthStore()
 const projectStore = useProjectStore()
-const commitStore = useCommitStore()
-const aiResponseStore = useAiResponseStore()
 
 // Use the new composable
 const { project, status, loadProject } = useProjectContext()
@@ -53,62 +47,15 @@ const retryFetchProjectDetails = () => {
   }
 }
 
-onMounted(async () => {
-  console.log('onMounted', 'showing project details for project:', projectIdentifierFromRoute.value)
-  console.log('Project Store:', projectStore.currentProject)
-  
-  const identifier = projectIdentifierFromRoute.value
-  if (identifier && authStore.isUserAuthenticated) {
-    await loadProject(identifier)
-    
-    // Default to commits view if project is loaded and no child route is active
-    if (project.value && route.name === 'ProjectPage') {
+onMounted(() => {
+  // Router guard ensures project is loaded, so just redirect to commits view if needed
+  if (project.value && route.name === 'ProjectPage') {
+    const identifier = projectIdentifierFromRoute.value
+    if (identifier) {
       router.replace({ name: 'ProjectCommitsView', params: { projectIdentifier: identifier } })
     }
-  } else if (!identifier) {
-    console.warn('ProjectPageView: No project identifier found in route.')
   }
 })
-
-watch(
-  () => projectIdentifierFromRoute.value,
-  async (newIdentifier, oldIdentifier) => {
-    if (newIdentifier && newIdentifier !== oldIdentifier) {
-      projectStore.resetProjectState()
-      commitStore.resetCommitState()
-      aiResponseStore.resetAiState()
-      
-      if (authStore.isUserAuthenticated) {
-        await loadProject(newIdentifier)
-        
-        // Default to commits view after project context changes
-        if (project.value) {
-          router.replace({ name: 'ProjectCommitsView', params: { projectIdentifier: newIdentifier } })
-        }
-      }
-    }
-  }
-)
-
-watch(
-  () => authStore.isUserAuthenticated,
-  async (isAuth, wasAuth) => {
-    const identifier = projectIdentifierFromRoute.value
-    if (isAuth && identifier) {
-      if (!wasAuth) {
-        // If user just logged in
-        projectStore.resetProjectState()
-        commitStore.resetCommitState()
-        aiResponseStore.resetAiState()
-      }
-      await loadProject(identifier)
-    } else if (!isAuth) {
-      projectStore.resetProjectState()
-      commitStore.resetCommitState()
-      aiResponseStore.resetAiState()
-    }
-  }
-)
 
 const handleActionSelected = (action: 'commit-summary' | 'documentation-generation') => {
   const currentProjectIdentifier = projectIdentifierFromRoute.value
