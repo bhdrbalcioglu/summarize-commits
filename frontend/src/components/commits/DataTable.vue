@@ -47,8 +47,7 @@
 </template>
 
 <script setup lang="ts" generic="TData extends Commit">
-// Removed TValue as it wasn't explicitly used and TData covers Commit
-import { ref, watch, computed, withDefaults } from 'vue'
+import { ref, computed, withDefaults, onMounted, onUnmounted, nextTick } from 'vue'
 import {
   useVueTable,
   getCoreRowModel,
@@ -58,13 +57,13 @@ import {
   type SortingState,
   type RowSelectionState,
   type ColumnFiltersState,
-  FlexRender,
-  type Row // Import Row type for 'r' parameter
+  FlexRender
 } from '@tanstack/vue-table'
 import { ArrowUp, ArrowDown } from 'lucide-vue-next'
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../ui/table'
 import type { Commit } from '../../types/commit'
 import { columns as defineColumnsFunction } from './columns'
+import { useEventBus } from '@/utils/eventBus'
 
 const props = withDefaults(
   defineProps<{
@@ -85,20 +84,22 @@ const rowSelection = ref<RowSelectionState>({})
 const columnFilters = ref<ColumnFiltersState>([])
 
 // For author filtering, if defineColumns needs these reactively
-const selectedAuthorsForFilter = ref<string[]>([]) // This will be updated by AuthorFilterHeader
+const selectedAuthorsForFilter = ref<string[]>([])
 const allAuthorsList = computed(() => {
-  // Ensure author is correctly accessed. Assuming `commit.author` is an object with a `name` property.
   return Array.from(new Set(props.commits.map((commit) => commit.author.name)))
 })
 
 // Pass the reactive refs to the columns definition function
 const tableColumns = computed(() => defineColumnsFunction(selectedAuthorsForFilter, allAuthorsList))
 
+// Event-driven initialization
+const { on, cleanup } = useEventBus()
+
 const table = useVueTable({
   get data() {
     return props.commits
   },
-  columns: tableColumns.value, // Use the computed columns
+  columns: tableColumns.value,
   state: {
     get sorting() {
       return sorting.value
@@ -124,14 +125,11 @@ const table = useVueTable({
         emit('toggleSelection', props.commits[index].id)
       }
     })
-    // rowSelection.value is updated by the watcher based on props.selectedCommitIds
   },
   onSortingChange: (updaterOrValue) => {
     sorting.value = typeof updaterOrValue === 'function' ? updaterOrValue(sorting.value) : updaterOrValue
   },
   onColumnFiltersChange: (updaterOrValue) => {
-    // This is where the columnFilters ref is updated when AuthorFilterHeader changes selectedAuthorsForFilter
-    // TanStack table will automatically use this for filtering if the column's filterFn is set
     columnFilters.value = typeof updaterOrValue === 'function' ? updaterOrValue(columnFilters.value) : updaterOrValue
   },
   getCoreRowModel: getCoreRowModel(),
@@ -141,51 +139,75 @@ const table = useVueTable({
   getRowId: (row) => row.id
 })
 
-// Watch selectedAuthorsForFilter (updated by AuthorFilterHeader) to set table's columnFilters
-watch(
-  selectedAuthorsForFilter,
-  (newAuthors) => {
-    const authorFilter = table.getColumn('author_name') // Assuming 'author_name' is the column ID
-    if (authorFilter) {
-      authorFilter.setFilterValue(newAuthors.length > 0 ? newAuthors : undefined)
+// Event-driven selection sync
+const initializeEventListeners = () => {
+  // Listen for external selection changes
+  on('COMMIT_SELECTION_CHANGED', ({ commitId, isSelected }) => {
+    syncSelectionFromEvent(commitId, isSelected)
+  })
+
+  // Listen for commits loaded to reset selection state
+  on('COMMITS_LOADED', () => {
+    nextTick(() => {
+      syncSelectionFromProps()
+    })
+  })
+}
+
+const syncSelectionFromEvent = (commitId: string, isSelected: boolean) => {
+  const newRowSelectionState: RowSelectionState = { ...rowSelection.value }
+  const rowIndex = props.commits.findIndex(commit => commit.id === commitId)
+  
+  if (rowIndex !== -1) {
+    if (isSelected) {
+      newRowSelectionState[rowIndex] = true
+    } else {
+      delete newRowSelectionState[rowIndex]
     }
-  },
-  { deep: true }
-)
-
-watch(
-  () => props.selectedCommitIds,
-  (newSelectedIds) => {
-    if (!newSelectedIds || !Array.isArray(newSelectedIds)) return
-
-    const newRowSelectionState: RowSelectionState = {}
-    // Use table.value to access the table instance
-    table.getRowModel().rows.forEach((row) => {
-      if (newSelectedIds.includes(row.original.id)) {
-        newRowSelectionState[row.id] = true // Use row.id (which is commit.id due to getRowId)
-      }
-    })
     rowSelection.value = newRowSelectionState
-  },
-  { immediate: true, deep: true }
-)
+  }
+}
 
-watch(
-  () => props.commits,
-  (newCommits) => {
-    // When commits prop changes, re-sync the selection state
-    const newRowSelectionState: RowSelectionState = {}
-    const selectedIds = props.selectedCommitIds || []
+const syncSelectionFromProps = () => {
+  if (!props.selectedCommitIds || !Array.isArray(props.selectedCommitIds)) return
 
-    // Use table.value here as well
-    const currentRows = table.getRowModel().rows
-    currentRows.forEach((row) => {
-      if (selectedIds.includes(row.original.id)) {
-        newRowSelectionState[row.id] = true
-      }
-    })
-    rowSelection.value = newRowSelectionState
-  },
-  { deep: true }
-)
+  const newRowSelectionState: RowSelectionState = {}
+  table.getRowModel().rows.forEach((row) => {
+    if (props.selectedCommitIds.includes(row.original.id)) {
+      newRowSelectionState[row.id] = true
+    }
+  })
+  rowSelection.value = newRowSelectionState
+}
+
+const updateAuthorFilter = () => {
+  const authorFilter = table.getColumn('author_name')
+  if (authorFilter) {
+    authorFilter.setFilterValue(selectedAuthorsForFilter.value.length > 0 ? selectedAuthorsForFilter.value : undefined)
+  }
+}
+
+onMounted(() => {
+  initializeEventListeners()
+  
+  // Initial sync
+  nextTick(() => {
+    syncSelectionFromProps()
+  })
+})
+
+onUnmounted(() => {
+  cleanup()
+})
+
+// Reactive updates for author filtering
+const handleAuthorFilterChange = () => {
+  updateAuthorFilter()
+}
+
+// Expose method for author filter updates
+defineExpose({
+  updateAuthorFilter: handleAuthorFilterChange,
+  selectedAuthorsForFilter
+})
 </script>

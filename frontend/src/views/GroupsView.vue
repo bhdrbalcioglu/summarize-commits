@@ -24,34 +24,55 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed, watch } from 'vue'
+import { onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
-import { useGroupStore, type Group } from '../stores/groupStore' // Import Group type if not globally available
+import { useGroupStore, type Group } from '../stores/groupStore'
 import SkeletonTable from '../components/SkeletonTable.vue'
-import DataTable from '../components/groups/DataTable.vue' // Ensure DataTable can handle the Group type
-import { columns } from '../components/groups/columns' // Ensure columns match Group type properties
+import DataTable from '../components/groups/DataTable.vue'
+import { columns } from '../components/groups/columns'
+import { useEventBus } from '@/utils/eventBus'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const groupStore = useGroupStore()
 
+// Event-driven initialization
+const { on, cleanup } = useEventBus()
+
 const pageTitle = computed(() => {
   return authStore.currentProvider === 'github' ? 'Your Organizations' : 'Your Groups'
 })
 
+const initializeEventListeners = () => {
+  // Listen for authentication changes
+  on('AUTH_STATUS_CHANGED', ({ isAuthenticated, provider }) => {
+    if (isAuthenticated && provider) {
+      handleAuthenticationChange(provider)
+    } else {
+      groupStore.resetGroupState()
+    }
+  })
+
+  // Listen for user logout
+  on('USER_LOGGED_OUT', () => {
+    groupStore.resetGroupState()
+  })
+}
+
+const handleAuthenticationChange = async (provider: string) => {
+  // Reset previous provider's groups and fetch new ones
+  groupStore.resetGroupState()
+  await groupStore.fetchGroups()
+}
+
 const navigateToGroupProjects = (group: Group) => {
-  // Use the aligned Group type
-  groupStore.selectGroup(group.id) // Update selected group in store
+  groupStore.selectGroup(group.id)
   router
     .push({
-      name: 'ProjectsView', // This route will now use projectListStore, which can get currentGroupId
-      // from groupStore.selectedGroupId or have it passed if needed.
-      // query parameters might still be useful for direct navigation/bookmarking,
-      // but the primary state for filtering projects should be in projectListStore via groupStore.
+      name: 'ProjectsView',
       query: {
-        // groupId: group.id.toString(), // Redundant if projectListStore uses selectedGroupId
-        groupName: group.name // Was group.full_name, changed to group.name
+        groupName: group.name
       }
     })
     .catch((err) => {
@@ -64,30 +85,14 @@ const retryFetchGroups = () => {
 }
 
 onMounted(() => {
+  initializeEventListeners()
+  
   if (authStore.isUserAuthenticated && authStore.currentProvider) {
     groupStore.fetchGroups()
-  } else {
-    // Handle case where user lands here without auth (e.g., direct navigation)
-    // Router guards should ideally prevent this, but a fallback is good.
-    // console.warn('GroupsView: User not authenticated or provider not set on mount.');
-    // Or redirect: router.push({ name: 'Home' });
   }
 })
 
-// Watch for changes in authentication status or provider
-watch(
-  () => [authStore.isUserAuthenticated, authStore.currentProvider],
-  ([isAuth, provider], [wasAuth, oldProvider]) => {
-    if (isAuth && provider) {
-      if (isAuth !== wasAuth || provider !== oldProvider || groupStore.allGroups.length === 0) {
-        // If auth status changed, provider changed, or groups are not loaded yet
-        groupStore.resetGroupState() // Clear previous provider's groups
-        groupStore.fetchGroups()
-      }
-    } else {
-      groupStore.resetGroupState() // Clear groups if user logs out or provider becomes null
-    }
-  },
-  { immediate: false } // Don't run immediately, onMounted handles initial fetch
-)
+onUnmounted(() => {
+  cleanup()
+})
 </script>

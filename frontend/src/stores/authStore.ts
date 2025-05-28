@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import apiClient from '@/services/apiService'
 import type { User } from './userStore'
 import { GLOBAL_KEYS, getStorageValue, setStorageValue, removeStorageValue } from '@/utils/localStorage'
+import { eventBus } from '@/utils/eventBus'
 
 export type AuthProvider = 'github' | 'gitlab'
 
@@ -36,30 +37,56 @@ export const useAuthStore = defineStore('auth', {
     userEmail: (state): string | null => state.user?.email || null
   },
   actions: {
-    setUser(userData: User) {
+    async setUser(userData: User) {
+      const wasAuthenticated = this.isUserAuthenticated
+      const oldProvider = this.authProvider
+      
       this.user = userData
       this.authProvider = userData.provider as AuthProvider
+      
       // Persist to localStorage for session continuity
       setStorageValue(GLOBAL_KEYS.AUTH_USER, userData)
       setStorageValue(GLOBAL_KEYS.AUTH_PROVIDER, userData.provider)
+
+      // Emit authentication status change event
+      await eventBus.emit('AUTH_STATUS_CHANGED', {
+        isAuthenticated: true,
+        provider: userData.provider as AuthProvider
+      })
+
+      // If provider changed, emit additional events
+      if (oldProvider && oldProvider !== userData.provider) {
+        console.log(`Provider changed from ${oldProvider} to ${userData.provider}`)
+      }
     },
 
-    clearUser() {
+    async clearUser() {
+      const wasAuthenticated = this.isUserAuthenticated
+      
       this.user = null
       this.authProvider = null
       removeStorageValue(GLOBAL_KEYS.AUTH_USER)
       removeStorageValue(GLOBAL_KEYS.AUTH_PROVIDER)
+
+      // Emit events if user was previously authenticated
+      if (wasAuthenticated) {
+        await eventBus.emit('USER_LOGGED_OUT', undefined)
+        await eventBus.emit('AUTH_STATUS_CHANGED', {
+          isAuthenticated: false,
+          provider: null
+        })
+      }
     },
 
     async fetchCurrentUser(): Promise<boolean> {
       this.isLoading = true
       try {
         const response = await apiClient.get<User>('/auth/me')
-        this.setUser(response.data)
+        await this.setUser(response.data)
         return true
       } catch (error: any) {
         console.error('Failed to fetch current user:', error)
-        this.clearUser()
+        await this.clearUser()
         return false
       } finally {
         this.isLoading = false
@@ -73,7 +100,7 @@ export const useAuthStore = defineStore('auth', {
       } catch (error) {
         console.error('Logout request failed:', error)
       } finally {
-        this.clearUser()
+        await this.clearUser()
         this.isLoading = false
         // Redirect to home page
         window.location.href = '/'
@@ -88,7 +115,7 @@ export const useAuthStore = defineStore('auth', {
         const isValid = await this.fetchCurrentUser()
         if (!isValid) {
           // If verification fails, clear the invalid data
-          this.clearUser()
+          await this.clearUser()
         }
       } else {
         // No user data in state, try to fetch from server (in case of fresh login)

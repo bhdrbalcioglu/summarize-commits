@@ -6,16 +6,12 @@
       <div v-if="shouldShowMainSkeleton" class="mb-6">
         <SkeletonForCommits />
       </div>
-      
+
       <!-- Project loading error -->
-      <div v-else-if="status === 'error'" class="mb-6 p-4 bg-red-100 text-red-700 rounded-md">
-        Error loading project: {{ projectStore.projectError }}
-      </div>
-      
+      <div v-else-if="status === 'error'" class="mb-6 p-4 bg-red-100 text-red-700 rounded-md">Error loading project: {{ projectStore.projectError }}</div>
+
       <!-- No project available -->
-      <div v-else-if="!project" class="mb-6 p-4 bg-yellow-100 text-yellow-700 rounded-md">
-        No project selected or project data is not available. Please select a project.
-      </div>
+      <div v-else-if="!project" class="mb-6 p-4 bg-yellow-100 text-yellow-700 rounded-md">No project selected or project data is not available. Please select a project.</div>
 
       <!-- Main content when project is ready -->
       <div v-else class="bg-white shadow-md rounded-lg p-6 mb-6">
@@ -51,37 +47,25 @@
         </div>
 
         <!-- Loading initial commits -->
-        <div v-if="isLoadingInitialCommitData" class="text-center py-4">
-          <i class="fas fa-spinner fa-spin text-xl text-gray-500"></i> Loading commits...
-        </div>
-        
+        <div v-if="isLoadingInitialCommitData" class="text-center py-4"><i class="fas fa-spinner fa-spin text-xl text-gray-500"></i> Loading commits...</div>
+
         <!-- Commit loading error -->
-        <div v-else-if="commitStore.statusCommits === 'error'" class="my-4 p-3 bg-red-100 text-red-600 rounded-md">
-          Error loading commits: {{ commitStore.errorMsgCommits }}
-        </div>
-        
+        <div v-else-if="commitStore.statusCommits === 'error'" class="my-4 p-3 bg-red-100 text-red-600 rounded-md">Error loading commits: {{ commitStore.errorMsgCommits }}</div>
+
         <!-- Commits table -->
         <DataTable v-else-if="project && commitStore.selectedBranchName" :commits="commitStore.commits" :selectedCommitIds="commitStore.selectedCommitIdsForAI" @toggle-selection="handleToggleCommitSelection" />
-        
+
         <!-- No branch selected -->
-        <div v-else-if="project && !commitStore.selectedBranchName && commitStore.statusBranches !== 'loading'" class="text-center py-4 text-gray-500">
-          Please select a branch to view commits.
-        </div>
+        <div v-else-if="project && !commitStore.selectedBranchName && commitStore.statusBranches !== 'loading'" class="text-center py-4 text-gray-500">Please select a branch to view commits.</div>
 
         <!-- Load more / pagination controls -->
         <div class="mt-4 flex justify-center">
           <Button v-if="commitStore.isMoreCommits && project && commitStore.selectedBranchName" @click="handleLoadMoreCommits" variant="outline" :disabled="isLoadingMoreCommits">
-            <span v-if="isLoadingMoreCommits">
-              <i class="fas fa-spinner fa-spin mr-2"></i>Loading...
-            </span>
+            <span v-if="isLoadingMoreCommits"> <i class="fas fa-spinner fa-spin mr-2"></i>Loading... </span>
             <span v-else>Load More Commits</span>
           </Button>
-          <span v-else-if="!commitStore.isMoreCommits && commitStore.commits.length > 0" class="text-gray-500 text-sm"> 
-            No more commits to load. 
-          </span>
-          <span v-else-if="commitStore.commits.length === 0 && !isLoadingInitialCommitData && project && commitStore.selectedBranchName && commitStore.statusCommits !== 'error'" class="text-gray-500 text-sm"> 
-            No commits found for this branch and period. 
-          </span>
+          <span v-else-if="!commitStore.isMoreCommits && commitStore.commits.length > 0" class="text-gray-500 text-sm"> No more commits to load. </span>
+          <span v-else-if="commitStore.commits.length === 0 && !isLoadingInitialCommitData && project && commitStore.selectedBranchName && commitStore.statusCommits !== 'error'" class="text-gray-500 text-sm"> No commits found for this branch and period. </span>
         </div>
       </div>
     </div>
@@ -89,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/authStore'
 import { useProjectStore } from '../stores/projectStore'
@@ -97,6 +81,7 @@ import { useCommitStore } from '../stores/commitStore'
 import { useAiResponseStore } from '../stores/aiResponseStore'
 import { useProjectContext } from '../composables/useProjectContext'
 import { useCommitLoadingStates } from '../composables/useCommitLoadingStates'
+import { useEventBus } from '@/utils/eventBus'
 import SkeletonForCommits from '../components/SkeletonForCommits.vue'
 import DataTable from '../components/commits/DataTable.vue'
 import { Checkbox } from '../components/ui/checkbox'
@@ -112,11 +97,38 @@ const router = useRouter()
 
 // Use the new composables
 const { project, status } = useProjectContext()
-const { 
-  isLoadingInitialCommitData,
-  isLoadingMoreCommits,
-  shouldShowMainSkeleton
-} = useCommitLoadingStates()
+const { isLoadingInitialCommitData, isLoadingMoreCommits, shouldShowMainSkeleton } = useCommitLoadingStates()
+
+// Event-driven initialization
+const { on, cleanup } = useEventBus()
+
+const initializeEventListeners = () => {
+  // Listen for project events to initialize commit data
+  on('PROJECT_LOADED', async ({ project }) => {
+    if (authStore.isUserAuthenticated) {
+      await initializeCommitData()
+    }
+  })
+
+  // Listen for branch events to handle UI updates
+  on('BRANCH_SELECTED', ({ branch }) => {
+    // UI will automatically update via reactive state
+    console.log(`Branch selected: ${branch.name}`)
+  })
+
+  on('DEFAULT_BRANCH_SELECTED', ({ branch }) => {
+    console.log(`Default branch selected: ${branch.name}`)
+  })
+
+  // Listen for commit events
+  on('COMMITS_LOADED', ({ commits, hasMore }) => {
+    console.log(`Loaded ${commits.length} commits, hasMore: ${hasMore}`)
+  })
+
+  on('COMMIT_SELECTION_CHANGED', ({ commitId, isSelected }) => {
+    console.log(`Commit ${commitId} ${isSelected ? 'selected' : 'deselected'}`)
+  })
+}
 
 const initializeCommitData = async () => {
   if (!project.value || !authStore.isUserAuthenticated) {
@@ -132,22 +144,17 @@ const initializeCommitData = async () => {
 }
 
 onMounted(() => {
+  initializeEventListeners()
+  
   // Router guard ensures project is loaded, so initialize commit data
   if (project.value && status.value === 'ready') {
     initializeCommitData()
   }
 })
 
-// Watch for project changes - when project becomes ready, initialize commit data
-watch(
-  () => ({ project: project.value, status: status.value }),
-  ({ project: newProject, status: newStatus }) => {
-    if (newProject && newStatus === 'ready' && authStore.isUserAuthenticated) {
-      initializeCommitData()
-    }
-  },
-  { immediate: true }
-)
+onUnmounted(() => {
+  cleanup()
+})
 
 const handleLanguageChange = (event: Event) => {
   const target = event.target as HTMLSelectElement
