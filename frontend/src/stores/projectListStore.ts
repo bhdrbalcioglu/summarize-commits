@@ -2,9 +2,8 @@
 import { defineStore } from 'pinia';
 import { useAuthStore } from './authStore';
 import apiClient from '@/services/apiService';
-// Assuming Project type is defined in your frontend/src/types directory
-// and aligns with the backend's Project type (backend/src/types/git.types.ts)
-import type { Project } from '@/types/project'; // Adjust path if your Project type is elsewhere
+import type { Project } from '@/types/project';
+import { GLOBAL_KEYS, getStorageValue, setStorageValue, removeStorageValue } from '@/utils/localStorage';
 
 // Define OrderByOptions and ProjectListParams (formerly ProjectFetchParams)
 // These should align with what your backend expects for its /api/[provider]/projects endpoint.
@@ -55,7 +54,7 @@ export const useProjectListStore = defineStore('projectList', {
     projects: [],
     isLoading: false,
     error: null,
-    selectedProjectId: localStorage.getItem('selectedProjectId') || null,
+    selectedProjectId: getStorageValue(GLOBAL_KEYS.SELECTED_PROJECT_ID, null),
     totalPages: 0,
     totalProjects: 0,
     currentPage: 1,
@@ -63,7 +62,7 @@ export const useProjectListStore = defineStore('projectList', {
     orderBy: 'last_activity_at', // Default to a common useful sort
     sortOrder: 'desc',
     searchTerm: '',
-    currentGroupId: localStorage.getItem('selectedGroupId') || null, // Sync with selected group from groupStore
+    currentGroupId: getStorageValue(GLOBAL_KEYS.SELECTED_GROUP_ID, null), // Sync with selected group from groupStore
   }),
   getters: {
     selectedProject: (state): Project | null => {
@@ -171,9 +170,9 @@ export const useProjectListStore = defineStore('projectList', {
       const newSelectedId = projectId !== null ? String(projectId) : null;
       this.selectedProjectId = newSelectedId;
       if (newSelectedId) {
-        localStorage.setItem('selectedProjectId', newSelectedId);
+        setStorageValue(GLOBAL_KEYS.SELECTED_PROJECT_ID, newSelectedId);
       } else {
-        localStorage.removeItem('selectedProjectId');
+        removeStorageValue(GLOBAL_KEYS.SELECTED_PROJECT_ID);
       }
       // Optionally, trigger fetching details for this project if projectStore is separate
       // const projectStore = useProjectStore();
@@ -200,7 +199,7 @@ export const useProjectListStore = defineStore('projectList', {
       this.isLoading = false;
       this.error = null;
       this.selectedProjectId = null;
-      localStorage.removeItem('selectedProjectId');
+      removeStorageValue(GLOBAL_KEYS.SELECTED_PROJECT_ID);
       this.totalPages = 0;
       this.totalProjects = 0;
       this.currentPage = 1;

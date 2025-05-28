@@ -4,10 +4,11 @@ import { useCommitStore } from './commitStore'
 import apiClient from '@/services/apiService'
 import type { SingleCommitAnalysis, BackendAnalysisRequest, BackendAnalysisResponse, BackendUpdateNotesRequest, BackendUpdateNotesResponse } from '@/types/ai.ts'
 import type { BackendCommitBundleItem } from '@/types/commit.ts'
+import { GLOBAL_KEYS, getStorageValue, setStorageValue, removeStorageValue } from '@/utils/localStorage'
 
 export interface AiResponseState {
-  analysisResults: SingleCommitAnalysis[] | null
-  generatedNotes: string | null
+  analysisResult: any | null
+  notesResult: any | null
   isLoadingAnalysis: boolean
   isLoadingNotesGeneration: boolean
   errorAnalysis: string | null
@@ -21,26 +22,22 @@ export const useAiResponseStore = defineStore('aiResponse', {
   /* state                                                               */
   /* ------------------------------------------------------------------ */
   state: (): AiResponseState => ({
-    // 👇 add `as <type>` so Pinia infers the union you want
-    analysisResults: null as SingleCommitAnalysis[] | null,
-    generatedNotes: null as string | null,
-
+    analysisResult: null,
+    notesResult: null,
     isLoadingAnalysis: false,
     isLoadingNotesGeneration: false,
-
-    errorAnalysis: null as string | null,
-    errorNotesGeneration: null as string | null,
-
-    targetLanguage: localStorage.getItem('aiTargetLanguage') || 'english',
-    isAuthorInclusionEnabled: JSON.parse(localStorage.getItem('aiIsAuthorIncluded') || 'false')
+    errorAnalysis: null,
+    errorNotesGeneration: null,
+    targetLanguage: getStorageValue(GLOBAL_KEYS.AI_TARGET_LANGUAGE, 'english'),
+    isAuthorInclusionEnabled: getStorageValue(GLOBAL_KEYS.AI_AUTHOR_INCLUSION, false)
   }),
 
   /* ------------------------------------------------------------------ */
   /* getters                                                             */
   /* ------------------------------------------------------------------ */
   getters: {
-    currentAnalysisResults: (state): SingleCommitAnalysis[] | null => state.analysisResults,
-    currentGeneratedNotes: (state): string | null => state.generatedNotes
+    currentAnalysisResults: (state): SingleCommitAnalysis[] | null => state.analysisResult,
+    currentGeneratedNotes: (state): string | null => state.notesResult
   },
 
   /* ------------------------------------------------------------------ */
@@ -50,12 +47,12 @@ export const useAiResponseStore = defineStore('aiResponse', {
     /* ---------------- user prefs ---------------- */
     setTargetLanguage(language: string): void {
       this.targetLanguage = language
-      localStorage.setItem('aiTargetLanguage', language)
+      setStorageValue(GLOBAL_KEYS.AI_TARGET_LANGUAGE, language)
     },
 
     setIsAuthorInclusionEnabled(enabled: boolean): void {
       this.isAuthorInclusionEnabled = enabled
-      localStorage.setItem('aiIsAuthorIncluded', JSON.stringify(enabled))
+      setStorageValue(GLOBAL_KEYS.AI_AUTHOR_INCLUSION, enabled)
     },
 
     /* ---------------- analysis ---------------- */
@@ -74,7 +71,7 @@ export const useAiResponseStore = defineStore('aiResponse', {
 
       this.isLoadingAnalysis = true
       this.errorAnalysis = null
-      this.analysisResults = null
+      this.analysisResult = null
 
       try {
         const commitBundlesToAnalyze: BackendCommitBundleItem[] = await commitStore.prepareCommitBundlesForAI()
@@ -91,10 +88,10 @@ export const useAiResponseStore = defineStore('aiResponse', {
 
         const { data } = await apiClient.post<BackendAnalysisResponse>('/openai/analyze-commits', requestPayload)
 
-        this.analysisResults = data.analysisResults
+        this.analysisResult = data.analysisResults
       } catch (err: any) {
         this.errorAnalysis = err.response?.data?.message || err.message || 'Failed to analyze commits.'
-        this.analysisResults = null
+        this.analysisResult = null
         console.error('Error during AI commit analysis:', err)
       } finally {
         this.isLoadingAnalysis = false
@@ -108,28 +105,28 @@ export const useAiResponseStore = defineStore('aiResponse', {
         this.errorNotesGeneration = 'User not authenticated to generate notes.'
         return
       }
-      if (!Array.isArray(this.analysisResults) || this.analysisResults.length === 0) {
+      if (!Array.isArray(this.analysisResult) || this.analysisResult.length === 0) {
         this.errorNotesGeneration = 'No analysis results available to generate notes. Please analyze commits first.'
         return
       }
 
       this.isLoadingNotesGeneration = true
       this.errorNotesGeneration = null
-      this.generatedNotes = null
+      this.notesResult = null
 
       try {
         const requestPayload: BackendUpdateNotesRequest = {
-          analysisResults: this.analysisResults,
+          analysisResults: this.analysisResult,
           language: this.targetLanguage,
           isAuthorIncluded: this.isAuthorInclusionEnabled
         }
 
         const { data } = await apiClient.post<BackendUpdateNotesResponse>('/openai/generate-notes', requestPayload)
 
-        this.generatedNotes = data.updateNotes
+        this.notesResult = data.updateNotes
       } catch (err: any) {
         this.errorNotesGeneration = err.response?.data?.message || err.message || 'Failed to generate update notes.'
-        this.generatedNotes = null
+        this.notesResult = null
         console.error('Error during AI notes generation:', err)
       } finally {
         this.isLoadingNotesGeneration = false
@@ -138,14 +135,14 @@ export const useAiResponseStore = defineStore('aiResponse', {
 
     /* ---------------- combined flow ---------------- */
     async processCommitsAndGenerateNotes(): Promise<void> {
-      this.analysisResults = null
-      this.generatedNotes = null
+      this.analysisResult = null
+      this.notesResult = null
       this.errorAnalysis = null
       this.errorNotesGeneration = null
 
       await this.analyzeSelectedCommits()
 
-      const results = this.analysisResults as SingleCommitAnalysis[] | null
+      const results = this.analysisResult as SingleCommitAnalysis[] | null
       if (Array.isArray(results) && results.length && !this.errorAnalysis) {
         await this.generateNotesFromAnalysis()
       }
@@ -153,8 +150,8 @@ export const useAiResponseStore = defineStore('aiResponse', {
 
     /* ---------------- utils ---------------- */
     clearAiData(): void {
-      this.analysisResults = null
-      this.generatedNotes = null
+      this.analysisResult = null
+      this.notesResult = null
       this.isLoadingAnalysis = false
       this.isLoadingNotesGeneration = false
       this.errorAnalysis = null
@@ -164,9 +161,9 @@ export const useAiResponseStore = defineStore('aiResponse', {
     resetAiState(): void {
       this.clearAiData()
       this.targetLanguage = 'english'
-      localStorage.removeItem('aiTargetLanguage')
+      removeStorageValue(GLOBAL_KEYS.AI_TARGET_LANGUAGE)
       this.isAuthorInclusionEnabled = false
-      localStorage.removeItem('aiIsAuthorIncluded')
+      removeStorageValue(GLOBAL_KEYS.AI_AUTHOR_INCLUSION)
     }
   }
 })

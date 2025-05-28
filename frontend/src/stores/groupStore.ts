@@ -2,34 +2,26 @@
 import { defineStore } from 'pinia'
 import { useAuthStore } from './authStore'
 import apiClient from '@/services/apiService'
-import { useProjectListStore } from './projectListStore' // For selectGroup action
+import type { Group } from '@/types/group'
+import { GLOBAL_KEYS, getStorageValue, setStorageValue, removeStorageValue } from '@/utils/localStorage'
 
-// Ensure this Group type aligns with what your backend API returns
-// (originating from backend/src/types/git.types.ts)
-// It should include 'provider' and other relevant fields.
-export interface Group {
-  id: string | number
-  provider: 'gitlab' | 'github'
-  name: string
-  path: string // For GitHub, this is the org login; for GitLab, it's the group path.
-  description: string | null
-  web_url: string
-  avatar_url: string | null
+export interface GroupState {
+  groups: Group[]
+  selectedGroupId: string | null
+  isLoading: boolean
+  error: string | null
 }
 
 export const useGroupStore = defineStore('group', {
-  state: () => ({
-    groups: [] as Group[],
+  state: (): GroupState => ({
+    groups: [],
+    selectedGroupId: getStorageValue(GLOBAL_KEYS.SELECTED_GROUP_ID, null),
     isLoading: false,
-    error: null as string | null,
-    selectedGroupId: localStorage.getItem('selectedGroupId') || (null as string | null)
+    error: null
   }),
   getters: {
     selectedGroup: (state): Group | null => {
-      if (!state.selectedGroupId) return null
-      // Ensure consistent ID comparison (string vs number)
-      const group = state.groups.find((g) => String(g.id) === state.selectedGroupId)
-      return group || null
+      return state.groups.find((group) => group.id === state.selectedGroupId) || null
     },
     allGroups: (state): Group[] => state.groups,
     isLoadingGroups: (state): boolean => state.isLoading,
@@ -82,9 +74,9 @@ export const useGroupStore = defineStore('group', {
       if (this.selectedGroupId !== newSelectedId) {
         this.selectedGroupId = newSelectedId
         if (newSelectedId) {
-          localStorage.setItem('selectedGroupId', newSelectedId)
+          setStorageValue(GLOBAL_KEYS.SELECTED_GROUP_ID, newSelectedId)
         } else {
-          localStorage.removeItem('selectedGroupId')
+          removeStorageValue(GLOBAL_KEYS.SELECTED_GROUP_ID)
         }
 
         // Trigger fetching projects for this newly selected group.
@@ -99,7 +91,7 @@ export const useGroupStore = defineStore('group', {
     clearGroupsAndSelection() {
       this.groups = []
       this.selectedGroupId = null // Also clear selectedGroupId state
-      localStorage.removeItem('selectedGroupId')
+      removeStorageValue(GLOBAL_KEYS.SELECTED_GROUP_ID)
       this.error = null
       this.isLoading = false
 
@@ -114,7 +106,7 @@ export const useGroupStore = defineStore('group', {
       this.isLoading = false
       this.error = null
       this.selectedGroupId = null
-      localStorage.removeItem('selectedGroupId')
+      removeStorageValue(GLOBAL_KEYS.SELECTED_GROUP_ID)
     }
   }
 })
