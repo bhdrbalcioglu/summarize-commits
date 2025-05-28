@@ -1,15 +1,12 @@
 <!-- frontend\src\views\CommitsView.vue -->
 <template>
   <div class="bg-gray-50 min-h-screen flex flex-col md:flex-row">
-    <!-- Project Card: Assuming it's part of ProjectPageView layout, not directly here -->
-    <!-- If needed here, it would bind to projectStore.activeProject -->
-
     <div class="flex-1 p-6">
-      <div v-if="projectStore.isLoadingProject || (isLoadingInitialData && !projectStore.projectError)" class="mb-6">
+      <div v-if="status === 'loading' || (isLoadingInitialData && status !== 'error')" class="mb-6">
         <SkeletonForCommits />
       </div>
-      <div v-else-if="projectStore.projectError" class="mb-6 p-4 bg-red-100 text-red-700 rounded-md">Error loading project: {{ projectStore.projectError }}</div>
-      <div v-else-if="!projectStore.activeProject" class="mb-6 p-4 bg-yellow-100 text-yellow-700 rounded-md">No project selected or project data is not available. Please select a project.</div>
+      <div v-else-if="status === 'error'" class="mb-6 p-4 bg-red-100 text-red-700 rounded-md">Error loading project: {{ projectStore.projectError }}</div>
+      <div v-else-if="!project" class="mb-6 p-4 bg-yellow-100 text-yellow-700 rounded-md">No project selected or project data is not available. Please select a project.</div>
 
       <div v-else class="bg-white shadow-md rounded-lg p-6 mb-6">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 space-y-4 md:space-y-0">
@@ -43,15 +40,15 @@
 
         <div v-if="commitStore.isLoadingCommits && commitStore.commits.length === 0" class="text-center py-4"><i class="fas fa-spinner fa-spin text-xl text-gray-500"></i> Loading commits...</div>
         <div v-else-if="commitStore.errorCommits" class="my-4 p-3 bg-red-100 text-red-600 rounded-md">Error loading commits: {{ commitStore.errorCommits }}</div>
-        <DataTable v-else-if="projectStore.activeProject && commitStore.selectedBranchName" :commits="commitStore.commits" :selectedCommitIds="commitStore.selectedCommitIdsForAI" @toggle-selection="handleToggleCommitSelection" />
-        <div v-else-if="projectStore.activeProject && !commitStore.selectedBranchName && !commitStore.isLoadingBranches" class="text-center py-4 text-gray-500">Please select a branch to view commits.</div>
+        <DataTable v-else-if="project && commitStore.selectedBranchName" :commits="commitStore.commits" :selectedCommitIds="commitStore.selectedCommitIdsForAI" @toggle-selection="handleToggleCommitSelection" />
+        <div v-else-if="project && !commitStore.selectedBranchName && !commitStore.isLoadingBranches" class="text-center py-4 text-gray-500">Please select a branch to view commits.</div>
 
         <div class="mt-4 flex justify-center">
-          <Button v-if="commitStore.isMoreCommits && projectStore.activeProject && commitStore.selectedBranchName" @click="handleLoadMoreCommits" variant="outline" :disabled="commitStore.isLoadingCommits">
+          <Button v-if="commitStore.isMoreCommits && project && commitStore.selectedBranchName" @click="handleLoadMoreCommits" variant="outline" :disabled="commitStore.isLoadingCommits">
             {{ commitStore.isLoadingCommits && commitStore.commits.length > 0 ? 'Loading...' : 'Load More Commits' }}
           </Button>
           <span v-else-if="!commitStore.isMoreCommits && commitStore.commits.length > 0" class="text-gray-500 text-sm"> No more commits to load. </span>
-          <span v-else-if="commitStore.commits.length === 0 && !commitStore.isLoadingCommits && projectStore.activeProject && commitStore.selectedBranchName && !commitStore.errorCommits" class="text-gray-500 text-sm"> No commits found for this branch and period. </span>
+          <span v-else-if="commitStore.commits.length === 0 && !commitStore.isLoadingCommits && project && commitStore.selectedBranchName && !commitStore.errorCommits" class="text-gray-500 text-sm"> No commits found for this branch and period. </span>
         </div>
       </div>
     </div>
@@ -65,6 +62,7 @@ import { useAuthStore } from '../stores/authStore'
 import { useProjectStore } from '../stores/projectStore'
 import { useCommitStore } from '../stores/commitStore'
 import { useAiResponseStore } from '../stores/aiResponseStore'
+import { useProjectContext } from '../composables/useProjectContext'
 import SkeletonForCommits from '../components/SkeletonForCommits.vue'
 import DataTable from '../components/commits/DataTable.vue'
 import { Checkbox } from '../components/ui/checkbox'
@@ -79,43 +77,21 @@ const aiResponseStore = useAiResponseStore()
 const route = useRoute()
 const router = useRouter()
 
+// Use the new composable
+const { project, status } = useProjectContext()
+
 const isLoadingInitialData = ref(true)
 
-const projectIdentifierFromRoute = computed(() => {
-  const param = route.params.projectIdentifier
-  return Array.isArray(param) ? param[0] : param
-})
-
-const initializeViewData = async () => {
-  isLoadingInitialData.value = true
-  if (!authStore.isUserAuthenticated) {
-    // Should be handled by router guards, but good for robustness
-    router.push({ name: 'Home' })
-    isLoadingInitialData.value = false
+const initializeCommitData = async () => {
+  if (!project.value || !authStore.isUserAuthenticated) {
     return
   }
 
-  const identifier = projectIdentifierFromRoute.value
-  if (identifier) {
-    // Fetch project details if not already loaded or if ID mismatch
-    if (!projectStore.activeProject || (projectStore.activeProject.provider === 'github' && projectStore.activeProject.path_with_namespace !== identifier) || (projectStore.activeProject.provider === 'gitlab' && String(projectStore.activeProject.id) !== identifier)) {
-      await projectStore.fetchProjectDetails(identifier)
-    }
-  } else if (!projectStore.activeProject) {
-    console.warn('CommitsView: No project identifier in route and no active project in store.')
-    // router.push({ name: 'ProjectsView' }); // Or some error state
-    isLoadingInitialData.value = false
-    return
-  }
-
-  // Once project is confirmed or loaded:
-  if (projectStore.activeProject) {
-    if (commitStore.branches.length === 0 && !commitStore.isLoadingBranches) {
-      await commitStore.fetchBranchesForProject() // This will auto-select branch and fetch commits if successful
-    } else if (commitStore.selectedBranchName && commitStore.commits.length === 0 && !commitStore.isLoadingCommits) {
-      // If branch is selected but commits are empty (e.g. navigating back)
-      await commitStore.fetchCommitsForCurrentBranch()
-    }
+  // Initialize commit data when project is available
+  if (commitStore.branches.length === 0 && !commitStore.isLoadingBranches) {
+    await commitStore.fetchBranchesForProject()
+  } else if (commitStore.selectedBranchName && commitStore.commits.length === 0 && !commitStore.isLoadingCommits) {
+    await commitStore.fetchCommitsForCurrentBranch()
   }
   isLoadingInitialData.value = false
 }
@@ -127,49 +103,33 @@ onBeforeRouteLeave(() => {
 })
 
 onMounted(() => {
-  initializeViewData()
+  if (project.value && status.value === 'ready') {
+    initializeCommitData()
+  }
 })
 
+// Watch for project changes - when project becomes ready, initialize commit data
 watch(
-  () => projectIdentifierFromRoute.value,
-  (newIdentifier, oldIdentifier) => {
-    if (newIdentifier && newIdentifier !== oldIdentifier) {
-      commitStore.resetCommitState() // Reset commits when project changes
-      projectStore.resetProjectState() // Reset project details
-      initializeViewData()
+  () => ({ project: project.value, status: status.value }),
+  ({ project: newProject, status: newStatus }) => {
+    if (newProject && newStatus === 'ready' && authStore.isUserAuthenticated) {
+      initializeCommitData()
+    } else if (!newProject || newStatus === 'loading') {
+      isLoadingInitialData.value = true
     }
-  }
+  },
+  { immediate: true }
 )
 
 watch(
   () => authStore.isUserAuthenticated,
   (isAuth) => {
-    if (isAuth && projectIdentifierFromRoute.value) {
-      initializeViewData() // Re-initialize if user logs in while on this page
+    if (isAuth && project.value && status.value === 'ready') {
+      initializeCommitData()
     } else if (!isAuth) {
       commitStore.resetCommitState()
-      projectStore.resetProjectState()
     }
   }
-)
-
-// Watch for project changes - when project is loaded, initialize commit data
-watch(
-  () => projectStore.activeProject,
-  (newProject) => {
-    if (newProject && authStore.isUserAuthenticated) {
-      // Initialize commit data when project becomes available
-      if (commitStore.branches.length === 0 && !commitStore.isLoadingBranches) {
-        commitStore.fetchBranchesForProject()
-      } else if (commitStore.selectedBranchName && commitStore.commits.length === 0 && !commitStore.isLoadingCommits) {
-        commitStore.fetchCommitsForCurrentBranch()
-      }
-      isLoadingInitialData.value = false
-    } else if (!newProject) {
-      isLoadingInitialData.value = true
-    }
-  },
-  { immediate: true }
 )
 
 const handleLanguageChange = (event: Event) => {
