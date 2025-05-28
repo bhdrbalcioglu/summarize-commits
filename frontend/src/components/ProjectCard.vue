@@ -1,7 +1,7 @@
 <!-- frontend\src\components\ProjectCard.vue -->
 <template>
   <div class="project-card-container w-full">
-    <div v-if="isLoading || !projectData" class="w-full">
+    <div v-if="isLoading" class="w-full">
       <SkeletonCard />
     </div>
     <div v-else-if="projectData" class="project-info text-center p-4 md:p-6 bg-white text-gray-800 rounded-lg shadow-md">
@@ -16,7 +16,7 @@
           <i class="fa-solid fa-eye"></i>
           <span>Public</span>
         </span>
-        <span v-else-if="projectData.visibility === 'private'" class="font-semibold flex items-center space-x-1 text-red-600">
+        <span v-else-if="projectData.visibility === 'private'" class="font-semibold flex items-center space-x-1 text-gray-600">
           <i class="fa-solid fa-lock"></i>
           <span>Private</span>
         </span>
@@ -50,6 +50,12 @@
       <div class="text-xs text-gray-500 mt-4 flex justify-center space-x-3">
         <span>⭐ {{ projectData.star_count ?? 0 }}</span>
         <span><i class="fa-solid fa-code-fork"></i> {{ projectData.forks_count ?? 0 }}</span>
+      </div>
+    </div>
+    <div v-else class="project-info text-center p-4 md:p-6 bg-white text-gray-800 rounded-lg shadow-md">
+      <div class="text-gray-500">
+        <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+        <p>No project data available</p>
       </div>
     </div>
   </div>

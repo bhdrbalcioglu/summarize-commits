@@ -1,10 +1,27 @@
 <template>
   <Popover v-model:open="open">
     <PopoverTrigger as-child>
-      <Button variant="outline" role="combobox" :aria-expanded="open" class="w-[200px] justify-between" :disabled="commitStore.statusBranches === 'loading' || commitStore.branches.length === 0">
+      <Button 
+        variant="outline" 
+        role="combobox" 
+        :aria-expanded="open" 
+        class="w-[200px] justify-between" 
+        :disabled="isDisabled"
+      >
         <span class="flex items-center truncate">
-          {{ currentSelectedBranch?.name || (commitStore.statusBranches === 'loading' ? 'Loading...' : 'Select branch...') }}
-          <Badge v-if="currentSelectedBranch?.is_default" variant="secondary" class="ml-2">Default</Badge>
+          <span v-if="commitStore.statusBranches === 'loading'">
+            <i class="fas fa-spinner fa-spin mr-2"></i>Loading branches...
+          </span>
+          <span v-else-if="currentSelectedBranch">
+            {{ currentSelectedBranch.name }}
+            <Badge v-if="currentSelectedBranch.is_default" variant="secondary" class="ml-2">Default</Badge>
+          </span>
+          <span v-else-if="commitStore.branches.length === 0 && commitStore.statusBranches === 'ready'">
+            No branches available
+          </span>
+          <span v-else>
+            Select branch...
+          </span>
         </span>
         <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </Button>
@@ -13,7 +30,7 @@
       <Command v-model="searchTerm">
         <CommandInput class="h-9" placeholder="Search branches..." />
         <CommandEmpty>
-          {{ searchTerm && filteredBranches.length === 0 ? 'No branch found.' : commitStore.branches.length === 0 ? 'No branches available.' : '' }}
+          {{ getEmptyMessage }}
         </CommandEmpty>
         <CommandList>
           <CommandGroup>
@@ -34,33 +51,49 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { Check, ChevronsUpDown } from 'lucide-vue-next'
-import { cn } from '@/components/lib/utils' // Assuming this is your utility for class names
+import { cn } from '@/components/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { useCommitStore } from '@/stores/commitStore'
-import { Badge } from '@/components/ui/badge' // Assuming ShadCN/UI Badge
+import { Badge } from '@/components/ui/badge'
 
 const commitStore = useCommitStore()
 const open = ref(false)
-const searchTerm = ref('') // For local filtering within the command input
+const searchTerm = ref('')
 
-// Uses the getter from the refactored commitStore
 const currentSelectedBranch = computed(() => commitStore.activeBranch)
 
 const filteredBranches = computed(() => {
   if (!searchTerm.value) {
     return commitStore.branches
   }
-  return commitStore.branches.filter((branch) => branch.name.toLowerCase().includes(searchTerm.value.toLowerCase()))
+  return commitStore.branches.filter((branch) => 
+    branch.name.toLowerCase().includes(searchTerm.value.toLowerCase())
+  )
+})
+
+const isDisabled = computed(() => {
+  return commitStore.statusBranches === 'loading' || 
+         (commitStore.branches.length === 0 && commitStore.statusBranches === 'ready')
+})
+
+const getEmptyMessage = computed(() => {
+  if (commitStore.statusBranches === 'loading') {
+    return 'Loading branches...'
+  }
+  if (searchTerm.value && filteredBranches.value.length === 0) {
+    return 'No branch found.'
+  }
+  if (commitStore.branches.length === 0) {
+    return 'No branches available.'
+  }
+  return ''
 })
 
 const handleBranchSelect = (branchName: string) => {
-  commitStore.selectBranch(branchName) // This action handles setting selectedBranchName and fetching commits
-  open.value = false // Close the popover
-  searchTerm.value = '' // Reset search term
+  commitStore.selectBranch(branchName)
+  open.value = false
+  searchTerm.value = ''
 }
-
-// No onMounted needed here as branch fetching is triggered by the parent view (CommitsView)
-// or by project selection. This component just displays and allows selection.
 </script>
