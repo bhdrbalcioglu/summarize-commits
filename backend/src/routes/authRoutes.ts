@@ -21,5 +21,5 @@ router.get("/github/callback", githubCallback); // This is hit by GitHub redirec
 
 // --- User Session Routes ---
 router.get("/me", isAuthenticated, getCurrentUser);
-router.post("/logout", /*isAuthenticated,*/ logoutUser); // isAuthenticated might not be strictly needed for logout if just clearing cookie
+router.post("/logout", isAuthenticated, logoutUser); // Enable authentication check for logout
 export default router;

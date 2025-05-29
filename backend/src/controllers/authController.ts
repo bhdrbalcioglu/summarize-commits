@@ -239,9 +239,15 @@ export const logoutUser = (
     `User logged out: ${req.auth.username} (Provider: ${req.auth.provider}, ID: ${req.auth.userId})`
   );
 
-  // Respond with a success message.
-  // The client is responsible for clearing its stored token.
+  // Clear the HttpOnly JWT cookie - this is the key fix!
+  res.clearCookie("jwt", {
+    httpOnly: true,
+    secure: environment.nodeEnv === "production",
+    sameSite: "lax"
+  });
+
+  // Respond with a success message
   res
     .status(200)
-    .json({ message: "Logout successful. Please clear your token." });
+    .json({ message: "Logout successful." });
 };
