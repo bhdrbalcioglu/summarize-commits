@@ -30,7 +30,16 @@
           <p class="text-white font-bold">Welcome, {{ authStore.user?.name }}</p>
           <Button variant="ghost" class="text-sm text-muted-foreground hover:text-foreground" @click="handleLogout"> Logout? </Button>
         </div>
-        <Button variant="outline" v-else class="mt-2 md:mt-0 w-full md:w-auto rounded-lg" @click="toggleModal" :disabled="authStore.isLoading"> Login </Button>
+        <Button 
+          variant="outline" 
+          v-else 
+          data-login-button
+          class="mt-2 md:mt-0 w-full md:w-auto rounded-lg" 
+          @click="toggleModal" 
+          :disabled="authStore.isLoading"
+        > 
+          Login 
+        </Button>
       </div>
     </div>
   </nav>

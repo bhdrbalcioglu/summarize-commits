@@ -6,6 +6,7 @@ import router from './router' // router'ı import ediyorsun
 import { createPinia } from 'pinia'
 import piniaPersist from 'pinia-plugin-persistedstate'
 import { useAuthStore } from './stores/authStore' // authStore'u import etmelisin
+import { MotionPlugin } from '@vueuse/motion'
 
 const pinia = createPinia() // Pinia instance'ı oluşturuluyor
 pinia.use(piniaPersist) // piniaPersist plugin'i kullanılıyor
@@ -13,6 +14,7 @@ pinia.use(piniaPersist) // piniaPersist plugin'i kullanılıyor
 const app = createApp(App)
 
 app.use(pinia) // Pinia'yı app'e önce tanıt
+app.use(MotionPlugin) // Motion plugin'i ekle
 
 // authStore instance'ını alabilmek için Pinia'nın app tarafından kullanılması lazım
 const authStore = useAuthStore()
@@ -21,7 +23,7 @@ const authStore = useAuthStore()
 authStore
   .initializeAuth()
   .then(() => {
-    console.log('using user', authStore.user, authStore.isAuthenticated, authStore.isLoading) // Eğer hata olursa, authStore'daki değerleri logla (örnek amaçl
+    console.log('using user', authStore.user, authStore.isUserAuthenticated, authStore.isLoading) // Eğer hata olursa, authStore'daki değerleri logla (örnek amaçl
     app.use(router) // Router'ı auth işlemi bittikten sonra ekle
     app.mount('#app')
   })
