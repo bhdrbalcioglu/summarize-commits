@@ -83,16 +83,63 @@ export const findOrCreateUserFromOAuth = async (
   );
 
   if (appUser) {
-    // Update existing user with new profile data and token
+    // Update existing user with enhanced profile data
     appUser.name = oauthProfile.name || oauthProfile.username;
     appUser.avatar_url = oauthProfile.avatar_url || "";
     appUser.email = oauthProfile.email || null;
-    appUser.providerAccessToken = providerAccessToken; // Store the OAuth token
-    appUser.tokenUpdatedAt = new Date(); // Track when token was updated
-    console.log("[AuthService] Updated existing user with new token");
+    appUser.web_url = oauthProfile.web_url || appUser.web_url;
+    appUser.providerAccessToken = providerAccessToken;
+    appUser.tokenUpdatedAt = new Date();
+    
+    // Enhanced fields
+    appUser.bio = oauthProfile.bio || null;
+    appUser.location = oauthProfile.location || null;
+    appUser.created_at = oauthProfile.created_at;
+    
+    // Provider-specific mapping
+    if (provider === 'github') {
+      appUser.company = oauthProfile.company || null;
+      appUser.website_url = oauthProfile.blog || null;
+      appUser.twitter_username = oauthProfile.twitter_username || null;
+      appUser.public_repos = oauthProfile.public_repos || 0;
+      appUser.followers = oauthProfile.followers || 0;
+      appUser.following = oauthProfile.following || 0;
+      appUser.updated_at = oauthProfile.updated_at;
+      appUser.hireable = oauthProfile.hireable;
+      
+      appUser.provider_metadata = {
+        github: {
+          public_gists: oauthProfile.public_gists || 0,
+          blog: oauthProfile.blog || null,
+        }
+      };
+    } else if (provider === 'gitlab') {
+      appUser.company = oauthProfile.organization || null;
+      appUser.website_url = oauthProfile.website_url || null;
+      appUser.twitter_username = oauthProfile.twitter || null;
+      appUser.linkedin = oauthProfile.linkedin || null;
+      appUser.discord = oauthProfile.discord || null;
+      appUser.public_email = oauthProfile.public_email || null;
+      appUser.job_title = oauthProfile.job_title || null;
+      appUser.pronouns = oauthProfile.pronouns || null;
+      appUser.is_bot = oauthProfile.bot || false;
+      appUser.last_activity_on = oauthProfile.last_activity_on;
+      
+      appUser.provider_metadata = {
+        gitlab: {
+          theme_id: oauthProfile.theme_id,
+          color_scheme_id: oauthProfile.color_scheme_id,
+          last_sign_in_at: oauthProfile.last_sign_in_at,
+          current_sign_in_at: oauthProfile.current_sign_in_at,
+          confirmed_at: oauthProfile.confirmed_at,
+        }
+      };
+    }
+    
+    console.log("[AuthService] Updated existing user with enhanced profile data");
   } else {
-    // Create new user with OAuth token
-    appUser = {
+    // Create new user with enhanced profile data
+    const baseUser: User = {
       id: oauthProfile.id,
       provider: provider,
       username: oauthProfile.username,
@@ -100,15 +147,62 @@ export const findOrCreateUserFromOAuth = async (
       avatar_url: oauthProfile.avatar_url || "",
       email: oauthProfile.email || null,
       web_url:
-        (oauthProfile as any).web_url ||
+        oauthProfile.web_url ||
         (provider === "gitlab"
           ? `https://gitlab.com/${oauthProfile.username}`
           : `https://github.com/${oauthProfile.username}`),
-      providerAccessToken: providerAccessToken, // Store the OAuth token
-      tokenUpdatedAt: new Date(), // Track when token was created
+      providerAccessToken: providerAccessToken,
+      tokenUpdatedAt: new Date(),
+      
+      // Enhanced fields
+      bio: oauthProfile.bio || null,
+      location: oauthProfile.location || null,
+      created_at: oauthProfile.created_at,
     };
-    usersStore.push(appUser); // Use usersStore instead of MOCK_USER_DB
-    console.log("[AuthService] Created new user with OAuth token");
+    
+    // Provider-specific mapping for new users
+    if (provider === 'github') {
+      baseUser.company = oauthProfile.company || null;
+      baseUser.website_url = oauthProfile.blog || null;
+      baseUser.twitter_username = oauthProfile.twitter_username || null;
+      baseUser.public_repos = oauthProfile.public_repos || 0;
+      baseUser.followers = oauthProfile.followers || 0;
+      baseUser.following = oauthProfile.following || 0;
+      baseUser.updated_at = oauthProfile.updated_at;
+      baseUser.hireable = oauthProfile.hireable;
+      
+      baseUser.provider_metadata = {
+        github: {
+          public_gists: oauthProfile.public_gists || 0,
+          blog: oauthProfile.blog || null,
+        }
+      };
+    } else if (provider === 'gitlab') {
+      baseUser.company = oauthProfile.organization || null;
+      baseUser.website_url = oauthProfile.website_url || null;
+      baseUser.twitter_username = oauthProfile.twitter || null;
+      baseUser.linkedin = oauthProfile.linkedin || null;
+      baseUser.discord = oauthProfile.discord || null;
+      baseUser.public_email = oauthProfile.public_email || null;
+      baseUser.job_title = oauthProfile.job_title || null;
+      baseUser.pronouns = oauthProfile.pronouns || null;
+      baseUser.is_bot = oauthProfile.bot || false;
+      baseUser.last_activity_on = oauthProfile.last_activity_on;
+      
+      baseUser.provider_metadata = {
+        gitlab: {
+          theme_id: oauthProfile.theme_id,
+          color_scheme_id: oauthProfile.color_scheme_id,
+          last_sign_in_at: oauthProfile.last_sign_in_at,
+          current_sign_in_at: oauthProfile.current_sign_in_at,
+          confirmed_at: oauthProfile.confirmed_at,
+        }
+      };
+    }
+    
+    appUser = baseUser;
+    usersStore.push(appUser);
+    console.log("[AuthService] Created new user with enhanced profile data");
   }
 
   console.log("[AuthService]: Found or created user:", {

@@ -32,5 +32,37 @@ export interface OAuthUserProfile {
   avatar_url?: string;
   web_url?: string; // URL to user's profile page on the provider platform
 
-  // Add any other common fields you expect from provider profiles
+  // Common fields available from both providers
+  bio?: string | null;
+  location?: string | null;
+  created_at?: string;
+  
+  // GitHub-specific fields
+  company?: string | null;
+  blog?: string | null;
+  twitter_username?: string | null;
+  public_repos?: number;
+  public_gists?: number;
+  followers?: number;
+  following?: number;
+  updated_at?: string;
+  hireable?: boolean | null;
+  
+  // GitLab-specific fields
+  organization?: string | null;
+  website_url?: string | null;
+  twitter?: string | null;
+  linkedin?: string | null;
+  discord?: string | null;
+  public_email?: string | null;
+  skype?: string | null;
+  job_title?: string | null;
+  pronouns?: string | null;
+  bot?: boolean;
+  last_activity_on?: string;
+  last_sign_in_at?: string;
+  current_sign_in_at?: string;
+  confirmed_at?: string;
+  theme_id?: number;
+  color_scheme_id?: number;
 }

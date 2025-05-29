@@ -15,10 +15,41 @@ export interface User {
   web_url?: string
   // Optional extended fields if /auth/me provides them
   state?: string
-  location?: string
+  location?: string | null
   created_at?: string
-  twitter_username?: string
-  bio?: string
+  twitter_username?: string | null
+  bio?: string | null
+  
+  // Enhanced profile fields
+  company?: string | null
+  website_url?: string | null
+  linkedin?: string | null
+  discord?: string | null
+  public_email?: string | null
+  job_title?: string | null
+  pronouns?: string | null
+  public_repos?: number
+  followers?: number
+  following?: number
+  updated_at?: string
+  last_activity_on?: string
+  hireable?: boolean | null
+  is_bot?: boolean
+  
+  // Provider-specific metadata
+  provider_metadata?: {
+    github?: {
+      public_gists?: number
+      blog?: string | null
+    }
+    gitlab?: {
+      theme_id?: number
+      color_scheme_id?: number
+      last_sign_in_at?: string
+      current_sign_in_at?: string
+      confirmed_at?: string
+    }
+  }
 }
 
 export const useUserStore = defineStore('user', {

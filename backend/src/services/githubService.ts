@@ -157,6 +157,20 @@ export const getGitHubUserProfile = async (
       email: primaryEmail || null,
       avatar_url: ghUser.avatar_url,
       web_url: ghUser.html_url,
+      
+      // Enhanced fields
+      bio: ghUser.bio || null,
+      location: ghUser.location || null,
+      company: ghUser.company || null,
+      blog: ghUser.blog || null,
+      twitter_username: ghUser.twitter_username || null,
+      public_repos: ghUser.public_repos || 0,
+      public_gists: ghUser.public_gists || 0,
+      followers: ghUser.followers || 0,
+      following: ghUser.following || 0,
+      created_at: ghUser.created_at,
+      updated_at: ghUser.updated_at,
+      hireable: ghUser.hireable,
     };
   } catch (error: any) {
     const axiosError = error as AxiosError;

@@ -14,6 +14,42 @@ export interface User {
   providerAccessToken?: string; // Store the OAuth access token for API calls
   providerRefreshToken?: string; // Store refresh token if available
   tokenUpdatedAt?: Date; // Track when tokens were last updated
+  
+  // Enhanced profile fields
+  bio?: string | null;
+  location?: string | null;
+  company?: string | null;
+  website_url?: string | null;
+  twitter_username?: string | null;
+  linkedin?: string | null;
+  discord?: string | null;
+  public_email?: string | null;
+  job_title?: string | null;
+  pronouns?: string | null;
+  public_repos?: number;
+  followers?: number;
+  following?: number;
+  created_at?: string;
+  updated_at?: string;
+  last_activity_on?: string;
+  hireable?: boolean | null;
+  is_bot?: boolean;
+  
+  // Provider-specific metadata
+  provider_metadata?: {
+    github?: {
+      public_gists?: number;
+      blog?: string | null;
+      skype?: string | null;
+    };
+    gitlab?: {
+      theme_id?: number;
+      color_scheme_id?: number;
+      last_sign_in_at?: string;
+      current_sign_in_at?: string;
+      confirmed_at?: string;
+    };
+  };
 }
 
 export interface ProjectNamespace {

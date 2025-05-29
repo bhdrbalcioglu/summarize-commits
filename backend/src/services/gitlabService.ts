@@ -92,7 +92,28 @@ export const getGitLabUserProfile = async (
       name: glUser.name,
       email: glUser.email, // GitLab provides email if scopes allow
       avatar_url: glUser.avatar_url,
-      web_url: glUser.web_url, // Add if you have this field in OAuthUserProfile
+      web_url: glUser.web_url,
+      
+      // Enhanced fields
+      bio: glUser.bio || null,
+      location: glUser.location || null,
+      organization: glUser.organization || null,
+      website_url: glUser.website_url || null,
+      twitter: glUser.twitter || null,
+      linkedin: glUser.linkedin || null,
+      discord: glUser.discord || null,
+      public_email: glUser.public_email || null,
+      skype: glUser.skype || null,
+      job_title: glUser.job_title || null,
+      pronouns: glUser.pronouns || null,
+      bot: glUser.bot || false,
+      created_at: glUser.created_at,
+      last_activity_on: glUser.last_activity_on,
+      last_sign_in_at: glUser.last_sign_in_at,
+      current_sign_in_at: glUser.current_sign_in_at,
+      confirmed_at: glUser.confirmed_at,
+      theme_id: glUser.theme_id,
+      color_scheme_id: glUser.color_scheme_id,
     };
   } catch (error: any) {
     console.error(

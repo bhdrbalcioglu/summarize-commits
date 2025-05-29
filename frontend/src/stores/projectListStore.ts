@@ -47,6 +47,11 @@ export interface ProjectListState {
   sortOrder: 'asc' | 'desc';
   searchTerm: string;
   currentGroupId: string | number | null; // Used as groupOrOrgId for backend
+  
+  // Latest Projects for Dashboard
+  latestProjects: Project[];
+  isLoadingLatest: boolean;
+  latestProjectsError: string | null;
 }
 
 export const useProjectListStore = defineStore('projectList', {
@@ -63,6 +68,9 @@ export const useProjectListStore = defineStore('projectList', {
     sortOrder: 'desc',
     searchTerm: '',
     currentGroupId: getStorageValue(GLOBAL_KEYS.SELECTED_GROUP_ID, null), // Sync with selected group from groupStore
+    latestProjects: [],
+    isLoadingLatest: false,
+    latestProjectsError: null,
   }),
   getters: {
     selectedProject: (state): Project | null => {
@@ -81,6 +89,11 @@ export const useProjectListStore = defineStore('projectList', {
     hasProjects: (state): boolean => state.projects.length > 0,
     isLoadingProjects: (state): boolean => state.isLoading,
     projectListError: (state): string | null => state.error,
+    
+    // Latest Projects Getters
+    hasLatestProjects: (state): boolean => state.latestProjects.length > 0,
+    isLoadingLatestProjects: (state): boolean => state.isLoadingLatest,
+    latestProjectsListError: (state): string | null => state.latestProjectsError,
   },
   actions: {
     setGroupIdCriteria(groupId: string | number | null) {
@@ -193,6 +206,43 @@ export const useProjectListStore = defineStore('projectList', {
       // Keep: itemsPerPage, orderBy, sortOrder, searchTerm, currentGroupId
     },
 
+    async fetchLatestProjects(limit: number = 3) {
+      const authStore = useAuthStore();
+      if (!authStore.isUserAuthenticated || !authStore.currentProvider) {
+        this.latestProjectsError = 'User not authenticated or provider not set to fetch latest projects.';
+        this.latestProjects = [];
+        this.isLoadingLatest = false;
+        return;
+      }
+      
+      this.isLoadingLatest = true;
+      this.latestProjectsError = null;
+
+      try {
+        const provider = authStore.currentProvider;
+        const params: ProjectListParams = {
+          groupOrOrgId: undefined, // Don't filter by group for latest projects
+          orderBy: 'last_activity_at',
+          sort: 'desc',
+          search: undefined,
+          page: 1,
+          perPage: limit,
+        };
+        const endpoint = `/${provider}/projects`;
+
+        const response = await apiClient.get<BackendProjectListResponse>(endpoint, { params });
+
+        this.latestProjects = response.data.projects;
+      } catch (err: any) {
+        const defaultMessage = `Failed to fetch latest projects for ${authStore.currentProvider}.`;
+        this.latestProjectsError = err.response?.data?.message || err.message || defaultMessage;
+        console.error(this.latestProjectsError, err);
+        this.latestProjects = [];
+      } finally {
+        this.isLoadingLatest = false;
+      }
+    },
+
     // Full reset of the store, e.g., on logout or provider change
     resetProjectListState() {
       this.projects = [];
@@ -208,6 +258,11 @@ export const useProjectListStore = defineStore('projectList', {
       this.sortOrder = 'desc';
       this.searchTerm = '';
       this.currentGroupId = null;
+      
+      // Reset latest projects state
+      this.latestProjects = [];
+      this.isLoadingLatest = false;
+      this.latestProjectsError = null;
       // No need to remove 'selectedGroupId' from localStorage here, as groupStore handles its own
     },
   },

@@ -29,6 +29,7 @@ declare module 'vue' {
     CommandList: typeof import('./src/components/ui/command/CommandList.vue')['default']
     CommandSeparator: typeof import('./src/components/ui/command/CommandSeparator.vue')['default']
     CommandShortcut: typeof import('./src/components/ui/command/CommandShortcut.vue')['default']
+    CompactProjectCard: typeof import('./src/components/CompactProjectCard.vue')['default']
     CompatibilitySection: typeof import('./src/components/CompatibilitySection.vue')['default']
     CustomPopover: typeof import('./src/components/commits/CustomPopover.vue')['default']
     DataTable: typeof import('./src/components/commits/DataTable.vue')['default']
