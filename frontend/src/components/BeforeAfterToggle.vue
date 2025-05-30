@@ -55,11 +55,9 @@
     </div>
 
     <!-- Disclaimer -->
-    <div class="text-center mt-6 px-1">
-      <div class="max-w-2xl mx-auto flex justify-center items-start gap-2 text-sm text-muted-foreground/80">
-        <svg class="w-4 h-4 mt-1 shrink-0 text-muted-foreground/60" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-        </svg>
+    <div class="text-center mt-6">
+      <div class="max-w-2xl mx-auto flex justify-center items-center text-sm text-muted-foreground/80">
+        <i class="fa-solid fa-circle-info text-muted-foreground/60 mr-2"></i>
         <p>
           <strong class="mr-1">Note:</strong>
           The examples shown above are mockups created for demonstration purposes and do not represent actual commit data or real user projects.

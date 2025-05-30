@@ -11,7 +11,8 @@ export const GLOBAL_KEYS = {
   SELECTED_GROUP_ID: 'selectedGroupId',
   SELECTED_PROJECT_ID: 'selectedProjectId',
   AI_TARGET_LANGUAGE: 'aiTargetLanguage',
-  AI_AUTHOR_INCLUSION: 'aiIsAuthorIncluded'
+  AI_AUTHOR_INCLUSION: 'aiIsAuthorIncluded',
+  THEME_MODE: 'themeMode'
 } as const
 
 // Project-scoped keys (will be prefixed with project identifier)

@@ -14,6 +14,9 @@ declare module 'vue' {
     AccordionTrigger: typeof import('./src/components/ui/accordion/AccordionTrigger.vue')['default']
     ActionSelector: typeof import('./src/components/ActionSelector.vue')['default']
     AuthorFilterHeader: typeof import('./src/components/commits/AuthorFilterHeader.vue')['default']
+    Avatar: typeof import('./src/components/ui/avatar/Avatar.vue')['default']
+    AvatarFallback: typeof import('./src/components/ui/avatar/AvatarFallback.vue')['default']
+    AvatarImage: typeof import('./src/components/ui/avatar/AvatarImage.vue')['default']
     Badge: typeof import('./src/components/ui/badge/Badge.vue')['default']
     BeforeAfterToggle: typeof import('./src/components/BeforeAfterToggle.vue')['default']
     BranchSelector: typeof import('./src/components/commits/BranchSelector.vue')['default']
@@ -32,6 +35,7 @@ declare module 'vue' {
     CompactProjectCard: typeof import('./src/components/CompactProjectCard.vue')['default']
     CompatibilitySection: typeof import('./src/components/CompatibilitySection.vue')['default']
     CustomPopover: typeof import('./src/components/commits/CustomPopover.vue')['default']
+    DarkModeToggle: typeof import('./src/components/ui/DarkModeToggle.vue')['default']
     DataTable: typeof import('./src/components/commits/DataTable.vue')['default']
     Dialog: typeof import('./src/components/ui/dialog/Dialog.vue')['default']
     DialogClose: typeof import('./src/components/ui/dialog/DialogClose.vue')['default']
@@ -83,6 +87,7 @@ declare module 'vue' {
     SkeletonCard: typeof import('./src/components/SkeletonCard.vue')['default']
     SkeletonForCommits: typeof import('./src/components/SkeletonForCommits.vue')['default']
     SkeletonTable: typeof import('./src/components/SkeletonTable.vue')['default']
+    Switch: typeof import('./src/components/ui/switch/Switch.vue')['default']
     Table: typeof import('./src/components/ui/table/Table.vue')['default']
     TableBody: typeof import('./src/components/ui/table/TableBody.vue')['default']
     TableCaption: typeof import('./src/components/ui/table/TableCaption.vue')['default']
@@ -93,5 +98,7 @@ declare module 'vue' {
     TableHeader: typeof import('./src/components/ui/table/TableHeader.vue')['default']
     TableRow: typeof import('./src/components/ui/table/TableRow.vue')['default']
     Textarea: typeof import('./src/components/ui/textarea/Textarea.vue')['default']
+    ThemeTransitionCanvas: typeof import('./src/components/ui/ThemeTransitionCanvas.vue')['default']
+    UserDropdownMenu: typeof import('./src/components/UserDropdownMenu.vue')['default']
   }
 }

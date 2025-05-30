@@ -6,6 +6,7 @@ import router from './router' // router'ı import ediyorsun
 import { createPinia } from 'pinia'
 import piniaPersist from 'pinia-plugin-persistedstate'
 import { useAuthStore } from './stores/authStore' // authStore'u import etmelisin
+import { useThemeStore } from './stores/themeStore' // themeStore'u import etmelisin
 import { MotionPlugin } from '@vueuse/motion'
 
 const pinia = createPinia() // Pinia instance'ı oluşturuluyor
@@ -16,8 +17,12 @@ const app = createApp(App)
 app.use(pinia) // Pinia'yı app'e önce tanıt
 app.use(MotionPlugin) // Motion plugin'i ekle
 
-// authStore instance'ını alabilmek için Pinia'nın app tarafından kullanılması lazım
+// authStore ve themeStore instance'larını alabilmek için Pinia'nın app tarafından kullanılması lazım
 const authStore = useAuthStore()
+const themeStore = useThemeStore()
+
+// Initialize theme first (synchronous)
+themeStore.initializeTheme()
 
 // initializeAuth asenkron bir işlem olduğu için .then() ile devam et
 authStore
