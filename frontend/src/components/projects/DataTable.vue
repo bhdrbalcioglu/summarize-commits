@@ -1,15 +1,24 @@
 <template>
-  <div class="border rounded-md overflow-x-auto">
-    <Table>
+  <div class="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+    <Table class="w-full">
       <TableHeader>
-        <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
-          <TableHead v-for="header in headerGroup.headers" :key="header.id" :style="{ width: header.getSize() !== 150 ? `${header.getSize()}px` : undefined }">
-            <div v-if="!header.isPlaceholder" class="flex items-center space-x-1 cursor-pointer" @click="header.column.getToggleSortingHandler()?.($event)">
+        <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id" class="border-b border-border bg-muted/30 hover:bg-muted/50 transition-colors">
+          <TableHead 
+            v-for="header in headerGroup.headers" 
+            :key="header.id" 
+            :style="{ width: header.getSize() !== 150 ? `${header.getSize()}px` : undefined }"
+            class="py-4 px-6 text-left font-semibold text-foreground"
+          >
+            <div 
+              v-if="!header.isPlaceholder" 
+              class="flex items-center space-x-2 cursor-pointer group transition-colors hover:text-primary" 
+              @click="header.column.getToggleSortingHandler()?.($event)"
+            >
               <FlexRender :render="header.column.columnDef.header" :props="header.getContext()" />
               <template v-if="header.column.getCanSort()">
-                <ArrowUp v-if="header.column.getIsSorted() === 'asc'" class="h-3 w-3 text-blue-500" />
-                <ArrowDown v-else-if="header.column.getIsSorted() === 'desc'" class="h-3 w-3 text-blue-500" />
-                <ChevronsUpDown v-else class="h-3 w-3 text-muted-foreground" />
+                <ArrowUp v-if="header.column.getIsSorted() === 'asc'" class="h-4 w-4 text-primary transition-transform group-hover:scale-110" />
+                <ArrowDown v-else-if="header.column.getIsSorted() === 'desc'" class="h-4 w-4 text-primary transition-transform group-hover:scale-110" />
+                <ChevronsUpDown v-else class="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors" />
               </template>
             </div>
           </TableHead>
@@ -17,15 +26,35 @@
       </TableHeader>
       <TableBody>
         <template v-if="table.getRowModel().rows.length">
-          <TableRow v-for="row in table.getRowModel().rows" :key="row.id" @click="handleRowClick(row.original)" class="cursor-pointer hover:bg-muted/50" :data-state="row.getIsSelected() ? 'selected' : ''">
-            <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
+          <TableRow 
+            v-for="row in table.getRowModel().rows" 
+            :key="row.id" 
+            @click="handleRowClick(row.original)" 
+            class="group cursor-pointer border-b border-border/50 last:border-b-0 hover:bg-muted/20 transition-all duration-200 hover:shadow-sm" 
+            :data-state="row.getIsSelected() ? 'selected' : ''"
+          >
+            <TableCell 
+              v-for="cell in row.getVisibleCells()" 
+              :key="cell.id"
+              class="py-4 px-6 text-foreground group-hover:text-foreground transition-colors"
+            >
               <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
             </TableCell>
           </TableRow>
         </template>
         <template v-else>
-          <TableRow>
-            <TableCell :colspan="tableColumns.length" class="h-24 text-center"> No projects found. </TableCell>
+          <TableRow class="hover:bg-transparent">
+            <TableCell :colspan="tableColumns.length" class="h-32 text-center">
+              <div class="flex flex-col items-center space-y-3">
+                <div class="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+                  <i class="fa-solid fa-folder-open text-xl text-muted-foreground"></i>
+                </div>
+                <div>
+                  <p class="text-foreground font-medium">No projects found</p>
+                  <p class="text-sm text-muted-foreground">Try adjusting your search criteria</p>
+                </div>
+              </div>
+            </TableCell>
           </TableRow>
         </template>
       </TableBody>

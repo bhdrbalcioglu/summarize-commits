@@ -1,51 +1,136 @@
 <!-- frontend\src\views\ProjectsView.vue -->
 <template>
-  <div class="p-6 bg-gray-50 min-h-screen">
-    <h5 class="text-2xl font-semibold mb-6 text-gray-800">
-      {{ pageTitle }}
-    </h5>
+  <div class="min-h-screen bg-background">
+    <!-- Modern backdrop with subtle pattern -->
+    <div class="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5"></div>
+    
+    <div class="relative p-4 sm:p-6 lg:p-8">
+      <!-- Main content card container with glassmorphism -->
+      <div class="max-w-7xl mx-auto">
+        <div class="bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl shadow-lg shadow-black/5 dark:shadow-black/20 p-6 lg:p-8">
+          <!-- Header section -->
+          <div class="mb-8">
+            <h5 class="text-3xl font-bold text-foreground mb-2">
+              {{ pageTitle }}
+            </h5>
+            <p class="text-muted-foreground">Manage and explore your repositories</p>
+          </div>
 
-    <div class="flex flex-col md:flex-row md:justify-between items-center mb-6 space-y-4 md:space-y-0">
-      <div class="w-full md:w-1/3">
-        <input type="text" :value="projectListStore.searchTerm" @input="handleSearchInput" placeholder="Search projects..." class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-200" />
-      </div>
-      <!-- Add sorting/filtering controls here if needed, e.g., for orderBy, sortOrder -->
-    </div>
+          <!-- Search and controls section -->
+          <div class="bg-muted/30 rounded-lg p-4 mb-6 border border-border/30">
+            <div class="flex flex-col md:flex-row md:justify-between items-center space-y-4 md:space-y-0">
+              <div class="w-full md:w-1/3">
+                <div class="relative">
+                  <input 
+                    type="text" 
+                    :value="projectListStore.searchTerm" 
+                    @input="handleSearchInput" 
+                    placeholder="Search projects..." 
+                    class="w-full pl-10 pr-4 py-3 border border-border rounded-lg shadow-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200 hover:shadow-md"
+                  />
+                  <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"></i>
+                </div>
+              </div>
+              <!-- Future: Add sorting/filtering controls here -->
+            </div>
+          </div>
 
-    <div v-if="projectListStore.isLoadingProjects">
-      <SkeletonTable :rows="10" :cols="5" />
-    </div>
-    <div v-else-if="projectListStore.projectListError" class="p-4 bg-red-100 text-red-700 rounded-md">
-      Error: {{ projectListStore.projectListError }}
-      <button @click="fetchData" class="ml-4 px-3 py-1 bg-blue-500 text-white rounded">Retry</button>
-    </div>
-    <div v-else-if="!projectListStore.hasProjects && !projectListStore.isLoadingProjects" class="text-center text-gray-500 py-8">No projects found.</div>
-    <div v-else>
-      <DataTable :projects="projectListStore.projects" @rowClick="navigateToProjectPage" />
-    </div>
+          <!-- Content section -->
+          <div class="bg-background/50 rounded-lg border border-border/30 overflow-hidden">
+            <div v-if="projectListStore.isLoadingProjects" class="p-6">
+              <SkeletonTable :rows="10" :cols="5" />
+            </div>
+            
+            <div v-else-if="projectListStore.projectListError" class="p-6">
+              <div class="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg p-4 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                  <i class="fa-solid fa-exclamation-triangle text-lg"></i>
+                  <span class="font-medium">Error: {{ projectListStore.projectListError }}</span>
+                </div>
+                <button 
+                  @click="fetchData" 
+                  class="px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+                >
+                  <i class="fa-solid fa-refresh mr-2"></i>Retry
+                </button>
+              </div>
+            </div>
+            
+            <div v-else-if="!projectListStore.hasProjects && !projectListStore.isLoadingProjects" class="p-12 text-center">
+              <div class="flex flex-col items-center space-y-4">
+                <div class="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                  <i class="fa-solid fa-folder-open text-2xl text-muted-foreground"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-foreground">No projects found</h3>
+                <p class="text-muted-foreground max-w-md">Try adjusting your search criteria or check your repository access.</p>
+              </div>
+            </div>
+            
+            <div v-else>
+              <DataTable :projects="projectListStore.projects" @rowClick="navigateToProjectPage" />
+            </div>
+          </div>
 
-    <div v-if="projectListStore.totalPages > 1 && !projectListStore.isLoadingProjects" class="mt-6 flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
-      <div class="flex items-center space-x-2">
-        <span class="text-sm text-gray-700">Items per page:</span>
-        <select :value="projectListStore.itemsPerPage" @change="handleItemsPerPageChange" class="px-3 py-1 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500 transition duration-200">
-          <option :value="10">10</option>
-          <option :value="20">20</option>
-          <option :value="50">50</option>
-          <option :value="100">100</option>
-        </select>
-      </div>
+          <!-- Enhanced pagination section -->
+          <div v-if="projectListStore.totalPages > 1 && !projectListStore.isLoadingProjects" class="mt-8">
+            <div class="bg-muted/30 rounded-lg p-4 border border-border/30">
+              <div class="flex flex-col lg:flex-row items-center justify-between space-y-4 lg:space-y-0">
+                <!-- Items per page selector -->
+                <div class="flex items-center space-x-3">
+                  <span class="text-sm font-medium text-foreground">Items per page:</span>
+                  <div class="relative">
+                    <select 
+                      :value="projectListStore.itemsPerPage" 
+                      @change="handleItemsPerPageChange" 
+                      class="appearance-none px-4 py-2 pr-8 border border-border rounded-md text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 hover:shadow-sm cursor-pointer"
+                    >
+                      <option :value="10">10</option>
+                      <option :value="20">20</option>
+                      <option :value="50">50</option>
+                      <option :value="100">100</option>
+                    </select>
+                    <i class="fa-solid fa-chevron-down absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground pointer-events-none"></i>
+                  </div>
+                </div>
 
-      <div class="flex items-center space-x-4">
-        <button class="px-3 py-1 border border-gray-300 rounded-md bg-white hover:bg-gray-100 disabled:opacity-50 transition duration-200" @click="goToPage(projectListStore.currentPage - 1)" :disabled="projectListStore.currentPage === 1">
-          <i class="fa-solid fa-arrow-left"></i>
-        </button>
-        <span class="text-sm text-gray-700">
-          Page <span class="font-semibold">{{ projectListStore.currentPage }}</span> of
-          <span class="font-semibold">{{ projectListStore.totalPages }}</span>
-        </span>
-        <button class="px-3 py-1 border border-gray-300 rounded-md bg-white hover:bg-gray-100 disabled:opacity-50 transition duration-200" @click="goToPage(projectListStore.currentPage + 1)" :disabled="projectListStore.currentPage >= projectListStore.totalPages">
-          <i class="fa-solid fa-arrow-right"></i>
-        </button>
+                <!-- Pagination controls -->
+                <div class="flex items-center space-x-2">
+                  <!-- Previous button -->
+                  <button 
+                    class="group px-3 py-2 border border-border rounded-lg bg-card hover:bg-accent text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-sm disabled:hover:shadow-none" 
+                    @click="goToPage(projectListStore.currentPage - 1)" 
+                    :disabled="projectListStore.currentPage === 1"
+                  >
+                    <i class="fa-solid fa-chevron-left transition-transform group-hover:-translate-x-0.5"></i>
+                  </button>
+
+                  <!-- Page info -->
+                  <div class="px-4 py-2 bg-background border border-border rounded-lg">
+                    <span class="text-sm text-foreground font-medium">
+                      Page <span class="font-bold text-primary">{{ projectListStore.currentPage }}</span> of <span class="font-bold">{{ projectListStore.totalPages }}</span>
+                    </span>
+                  </div>
+
+                  <!-- Next button -->
+                  <button 
+                    class="group px-3 py-2 border border-border rounded-lg bg-card hover:bg-accent text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-sm disabled:hover:shadow-none" 
+                    @click="goToPage(projectListStore.currentPage + 1)" 
+                    :disabled="projectListStore.currentPage >= projectListStore.totalPages"
+                  >
+                    <i class="fa-solid fa-chevron-right transition-transform group-hover:translate-x-0.5"></i>
+                  </button>
+                </div>
+
+                <!-- Page count info -->
+                <div class="text-sm text-muted-foreground">
+                  Showing {{ (projectListStore.currentPage - 1) * projectListStore.itemsPerPage + 1 }} to 
+                  {{ Math.min(projectListStore.currentPage * projectListStore.itemsPerPage, projectListStore.totalProjects || 0) }} 
+                  of {{ projectListStore.totalProjects || 0 }} results
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

@@ -191,7 +191,7 @@ const triggerAIProcessing = async () => {
 
   // Start AI processing in background
   console.log('⏳ [CommitsView] Starting processCommitsAndGenerateNotes in background...')
-  
+
   try {
     // processCommitsAndGenerateNotes will internally call prepareCommitBundlesForAI
     await aiResponseStore.processCommitsAndGenerateNotes()
