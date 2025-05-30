@@ -93,7 +93,7 @@ export const getGitLabUserProfile = async (
       email: glUser.email, // GitLab provides email if scopes allow
       avatar_url: glUser.avatar_url,
       web_url: glUser.web_url,
-      
+
       // Enhanced fields
       bio: glUser.bio || null,
       location: glUser.location || null,
@@ -192,6 +192,34 @@ export const fetchProjectsFromGitLab = async (
         last_activity_at: glProject.last_activity_at,
         created_at: glProject.created_at,
         visibility: glProject.visibility,
+
+        // Enhanced fields for Phase 1
+        license: glProject.license
+          ? {
+              key: glProject.license.key,
+              name: glProject.license.name,
+              nickname: glProject.license.nickname,
+              html_url: glProject.license.html_url,
+            }
+          : null,
+        language: null, // GitLab doesn't provide primary language in project listing
+        size: glProject.statistics?.repository_size || 0,
+        topics: glProject.topics || [],
+        open_issues_count: glProject.open_issues_count || 0,
+        watchers_count: undefined, // GitLab doesn't have watchers concept like GitHub
+        homepage: glProject.homepage || null,
+        archived: glProject.archived || false,
+        avatar_url: glProject.avatar_url || null,
+        readme_url: glProject.readme_url || null,
+        statistics: glProject.statistics
+          ? {
+              commit_count: glProject.statistics.commit_count,
+              storage_size: glProject.statistics.storage_size,
+              repository_size: glProject.statistics.repository_size,
+              lfs_objects_size: glProject.statistics.lfs_objects_size,
+              job_artifacts_size: glProject.statistics.job_artifacts_size,
+            }
+          : null,
       })
     );
 
@@ -246,6 +274,34 @@ export const fetchProjectDetailsFromGitLab = async (
       last_activity_at: glProject.last_activity_at,
       created_at: glProject.created_at,
       visibility: glProject.visibility,
+
+      // Enhanced fields for Phase 1
+      license: glProject.license
+        ? {
+            key: glProject.license.key,
+            name: glProject.license.name,
+            nickname: glProject.license.nickname,
+            html_url: glProject.license.html_url,
+          }
+        : null,
+      language: null, // GitLab doesn't provide primary language in project endpoint
+      size: glProject.statistics?.repository_size || 0,
+      topics: glProject.topics || [],
+      open_issues_count: glProject.open_issues_count || 0,
+      watchers_count: undefined, // GitLab doesn't have watchers concept like GitHub
+      homepage: glProject.homepage || null,
+      archived: glProject.archived || false,
+      avatar_url: glProject.avatar_url || null,
+      readme_url: glProject.readme_url || null,
+      statistics: glProject.statistics
+        ? {
+            commit_count: glProject.statistics.commit_count,
+            storage_size: glProject.statistics.storage_size,
+            repository_size: glProject.statistics.repository_size,
+            lfs_objects_size: glProject.statistics.lfs_objects_size,
+            job_artifacts_size: glProject.statistics.job_artifacts_size,
+          }
+        : null,
     };
   } catch (error: any) {
     console.error(

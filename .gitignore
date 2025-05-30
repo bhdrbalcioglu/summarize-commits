@@ -28,3 +28,6 @@ dist-ssr
 
 docs
 .env
+
+codebase_content.md
+generate_codebase_docs.js

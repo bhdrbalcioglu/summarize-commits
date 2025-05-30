@@ -14,7 +14,7 @@ export interface User {
   providerAccessToken?: string; // Store the OAuth access token for API calls
   providerRefreshToken?: string; // Store refresh token if available
   tokenUpdatedAt?: Date; // Track when tokens were last updated
-  
+
   // Enhanced profile fields
   bio?: string | null;
   location?: string | null;
@@ -34,7 +34,7 @@ export interface User {
   last_activity_on?: string;
   hireable?: boolean | null;
   is_bot?: boolean;
-  
+
   // Provider-specific metadata
   provider_metadata?: {
     github?: {
@@ -61,6 +61,23 @@ export interface ProjectNamespace {
   avatar_url?: string;
 }
 
+export interface ProjectLicense {
+  key: string;
+  name: string;
+  spdx_id?: string;
+  nickname?: string;
+  url?: string;
+  html_url?: string;
+}
+
+export interface ProjectStatistics {
+  commit_count?: number;
+  storage_size?: number;
+  repository_size?: number;
+  lfs_objects_size?: number;
+  job_artifacts_size?: number;
+}
+
 export interface Project {
   id: string | number; // Provider's project/repository ID
   provider: GitProvider;
@@ -75,7 +92,19 @@ export interface Project {
   last_activity_at?: string | null; // ISO Date string
   created_at?: string; // ISO Date string
   visibility?: "public" | "internal" | "private"; // More common in GitLab, GitHub is mainly public/private
-  // topics?: string[]; // Tags/keywords
+
+  // Enhanced fields for Phase 1
+  license?: ProjectLicense | null;
+  language?: string | null;
+  size?: number; // Repository size in KB
+  topics?: string[];
+  open_issues_count?: number;
+  watchers_count?: number;
+  homepage?: string | null;
+  archived?: boolean;
+  statistics?: ProjectStatistics | null;
+  avatar_url?: string | null;
+  readme_url?: string | null;
 }
 
 // For listing projects, parameters your backend API might accept

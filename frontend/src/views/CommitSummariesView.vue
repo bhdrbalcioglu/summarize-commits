@@ -1,58 +1,76 @@
 <template>
-  <div class="bg-gray-100 min-h-screen flex">
-    <div v-if="projectStore.activeProject" class="w-1/4 bg-gray-50 border-r border-gray-200 p-4">
-      <ProjectCard :project="projectStore.activeProject" :is-loading="projectStore.isLoadingProject" />
-    </div>
-    <div v-else class="w-1/4 bg-gray-50 border-r border-gray-200 p-4 flex items-center justify-center text-gray-500">
-      <p v-if="projectStore.isLoadingProject">Loading project...</p>
-      <p v-else>No project selected or details available.</p>
-    </div>
-
-    <div class="flex-1 p-8 mx-4 px-5 overflow-hidden sm:px-6 lg:px-8 flex flex-col">
-      <div class="bg-white shadow-lg rounded-lg p-8 max-w-full flex-1 flex flex-col">
-        <div class="flex justify-between items-center mb-6">
-          <h1 class="text-xl font-extrabold text-gray-800 flex items-center">
-            <i class="fas fa-clipboard-list mr-3 text-green-500"></i>
-            AI Generated Summary
-          </h1>
-        </div>
-
-        <div v-if="aiResponseStore.errorAnalysis || aiResponseStore.errorNotesGeneration" class="mb-4 text-red-500 bg-red-100 p-3 rounded-md">
-          <p v-if="aiResponseStore.errorAnalysis">Error during analysis: {{ aiResponseStore.errorAnalysis }}</p>
-          <p v-if="aiResponseStore.errorNotesGeneration">Error during notes generation: {{ aiResponseStore.errorNotesGeneration }}</p>
-          <div class="mt-3">
-            <button 
-              @click="retryAIProcessing" 
-              class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
-              :disabled="isLoadingAIResponse"
-            >
-              <i class="fas fa-redo mr-2"></i>
-              Retry
-            </button>
+  <div class="min-h-screen bg-background">
+    <div class="flex h-screen">
+      <!-- Project Sidebar -->
+      <div v-if="projectStore.activeProject" class="w-80 bg-card/50 backdrop-blur-xl border-r border-border/50 p-4 flex flex-col">
+        <ProjectCard :project="projectStore.activeProject" :is-loading="projectStore.isLoadingProject" />
+      </div>
+      <div v-else class="w-80 bg-card/50 backdrop-blur-xl border-r border-border/50 p-6 flex items-center justify-center">
+        <div class="text-center space-y-3">
+          <div v-if="projectStore.isLoadingProject" class="flex flex-col items-center gap-3">
+            <div class="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+            <p class="text-muted-foreground">Loading project...</p>
+          </div>
+          <div v-else class="flex flex-col items-center gap-3">
+            <i class="fas fa-folder-open text-4xl text-muted-foreground/50"></i>
+            <p class="text-muted-foreground">No project selected or details available.</p>
           </div>
         </div>
+      </div>
 
-        <!-- No commits selected warning -->
-        <div v-else-if="!isLoadingAIResponse && !aiResponseStore.currentGeneratedNotes && commitStore.selectedCommitIdsForAI.length === 0" class="mb-4 text-yellow-600 bg-yellow-100 p-3 rounded-md">
-          <p>No commits are selected for AI processing.</p>
-          <div class="mt-3">
-            <button 
-              @click="navigateToCommits" 
-              class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600 transition-colors"
-            >
-              <i class="fas fa-arrow-left mr-2"></i>
-              Go Back to Select Commits
-            </button>
+      <!-- Main Content -->
+      <div class="flex-1 p-6 overflow-hidden flex flex-col">
+        <div class="bg-card/80 backdrop-blur-xl border border-border/50 rounded-xl shadow-lg shadow-black/5 dark:shadow-black/20 p-8 flex-1 flex flex-col transition-all duration-300 hover:shadow-xl hover:shadow-black/10 dark:hover:shadow-black/30">
+          <!-- Header -->
+          <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-4">
+              <div class="p-3 bg-primary/10 rounded-xl border border-primary/20">
+                <i class="fas fa-robot text-2xl text-primary"></i>
+              </div>
+              <div>
+                <h1 class="text-2xl font-bold text-foreground">AI Generated Summary</h1>
+                <p class="text-muted-foreground">Your commits transformed into professional release notes</p>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div class="flex-1">
-          <EnhancedTextDisplay
-            :text="aiResponseStore.currentGeneratedNotes"
-            :is-loading="isLoadingAIResponse"
-            :loading-message="loadingMessage"
-            @text-updated="handleTextUpdate"
-          />
+          <!-- Error States -->
+          <div v-if="aiResponseStore.errorAnalysis || aiResponseStore.errorNotesGeneration" class="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-xl">
+            <div class="flex items-start gap-3">
+              <i class="fas fa-exclamation-triangle text-destructive text-lg mt-0.5"></i>
+              <div class="flex-1">
+                <h3 class="font-semibold text-destructive mb-2">Processing Error</h3>
+                <div class="space-y-1 text-sm text-destructive/80">
+                  <p v-if="aiResponseStore.errorAnalysis">Analysis Error: {{ aiResponseStore.errorAnalysis }}</p>
+                  <p v-if="aiResponseStore.errorNotesGeneration">Generation Error: {{ aiResponseStore.errorNotesGeneration }}</p>
+                </div>
+                <button @click="retryAIProcessing" class="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-lg transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md" :disabled="isLoadingAIResponse">
+                  <i class="fas fa-redo text-sm"></i>
+                  <span>{{ isLoadingAIResponse ? 'Retrying...' : 'Retry' }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- No Commits Warning -->
+          <div v-else-if="!isLoadingAIResponse && !aiResponseStore.currentGeneratedNotes && commitStore.selectedCommitIdsForAI.length === 0" class="mb-6 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 rounded-xl">
+            <div class="flex items-start gap-3">
+              <i class="fas fa-info-circle text-amber-600 dark:text-amber-400 text-lg mt-0.5"></i>
+              <div class="flex-1">
+                <h3 class="font-semibold text-amber-800 dark:text-amber-200 mb-2">No Commits Selected</h3>
+                <p class="text-amber-700 dark:text-amber-300 text-sm mb-3">Please select commits from your repository to generate AI-powered release notes.</p>
+                <button @click="navigateToCommits" class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md">
+                  <i class="fas fa-arrow-left text-sm"></i>
+                  <span>Select Commits</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI Text Display -->
+          <div class="flex-1 min-h-0">
+            <EnhancedTextDisplay :text="aiResponseStore.currentGeneratedNotes" :is-loading="isLoadingAIResponse" :loading-message="loadingMessage" @text-updated="handleTextUpdate" />
+          </div>
         </div>
       </div>
     </div>
@@ -140,5 +158,32 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Styles are now handled by the EnhancedTextDisplay component */
+/* Additional styles for enhanced visual appeal */
+.min-h-screen {
+  min-height: 100vh;
+}
+
+/* Smooth transitions for all interactive elements */
+button {
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* Loading spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
 </style>

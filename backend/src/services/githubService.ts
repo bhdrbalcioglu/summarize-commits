@@ -157,7 +157,7 @@ export const getGitHubUserProfile = async (
       email: primaryEmail || null,
       avatar_url: ghUser.avatar_url,
       web_url: ghUser.html_url,
-      
+
       // Enhanced fields
       bio: ghUser.bio || null,
       location: ghUser.location || null,
@@ -293,6 +293,24 @@ export const fetchRepositoriesFromGitHub = async (
         last_activity_at: ghRepo.pushed_at, // pushed_at is often more relevant
         created_at: ghRepo.created_at,
         visibility: ghRepo.private ? "private" : "public",
+        
+        // Enhanced fields for Phase 1
+        license: ghRepo.license ? {
+          key: ghRepo.license.key,
+          name: ghRepo.license.name,
+          spdx_id: ghRepo.license.spdx_id,
+          url: ghRepo.license.url
+        } : null,
+        language: ghRepo.language || null,
+        size: ghRepo.size || 0,
+        topics: ghRepo.topics || [],
+        open_issues_count: ghRepo.open_issues_count || 0,
+        watchers_count: ghRepo.watchers_count || 0,
+        homepage: ghRepo.homepage || null,
+        archived: ghRepo.archived || false,
+        avatar_url: null, // GitHub repos don't have avatars, only owners do
+        readme_url: null, // GitHub doesn't provide direct readme_url in repo API
+        statistics: null // GitHub doesn't provide detailed statistics in single repo endpoint
       })
     );
 
@@ -360,6 +378,24 @@ export const fetchRepositoryDetailsFromGitHub = async (
       last_activity_at: ghRepo.pushed_at,
       created_at: ghRepo.created_at,
       visibility: ghRepo.private ? "private" : "public",
+      
+      // Enhanced fields for Phase 1
+      license: ghRepo.license ? {
+        key: ghRepo.license.key,
+        name: ghRepo.license.name,
+        spdx_id: ghRepo.license.spdx_id,
+        url: ghRepo.license.url
+      } : null,
+      language: ghRepo.language || null,
+      size: ghRepo.size || 0,
+      topics: ghRepo.topics || [],
+      open_issues_count: ghRepo.open_issues_count || 0,
+      watchers_count: ghRepo.watchers_count || 0,
+      homepage: ghRepo.homepage || null,
+      archived: ghRepo.archived || false,
+      avatar_url: null, // GitHub repos don't have avatars, only owners do
+      readme_url: null, // GitHub doesn't provide direct readme_url in repo API
+      statistics: null // GitHub doesn't provide detailed statistics in single repo endpoint
     };
   } catch (error: any) {
     const axiosError = error as AxiosError;

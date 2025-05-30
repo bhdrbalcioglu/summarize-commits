@@ -1,20 +1,32 @@
 <!-- frontend\src\components\commits\DataTable.vue -->
 <template>
-  <div class="border rounded-md w-full">
+  <div class="bg-background/50 rounded-lg border border-border/30 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
     <div class="overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
-            <TableHead v-for="header in headerGroup.headers" :key="header.id" :class="getHeaderClass(header.id)">
+          <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id" class="bg-muted/40 backdrop-blur-sm border-b border-border/50">
+            <TableHead v-for="header in headerGroup.headers" :key="header.id" :class="getHeaderClass(header.id)" class="transition-colors duration-200 hover:bg-muted/60">
               <div v-if="!header.isPlaceholder" class="flex items-center space-x-1">
                 <FlexRender :render="header.column.columnDef.header" :props="header.getContext()" />
                 <template v-if="header.column.getCanSort()">
-                  <button @click="() => header.column.toggleSorting(false)" :title="`Sort Ascending by ${header.column.id}`">
-                    <ArrowUp class="h-3 w-3" :class="{ 'text-blue-500': header.column.getIsSorted() === 'asc' }" />
-                  </button>
-                  <button @click="() => header.column.toggleSorting(true)" :title="`Sort Descending by ${header.column.id}`">
-                    <ArrowDown class="h-3 w-3" :class="{ 'text-blue-500': header.column.getIsSorted() === 'desc' }" />
-                  </button>
+                  <div class="flex flex-col space-y-0.5 ml-2">
+                    <button 
+                      @click="() => header.column.toggleSorting(false)" 
+                      :title="`Sort Ascending by ${header.column.id}`"
+                      class="p-0.5 rounded hover:bg-primary/20 transition-all duration-200 transform hover:scale-110"
+                      :class="{ 'text-primary bg-primary/10': header.column.getIsSorted() === 'asc', 'text-muted-foreground hover:text-foreground': header.column.getIsSorted() !== 'asc' }"
+                    >
+                      <ArrowUp class="h-3 w-3" />
+                    </button>
+                    <button 
+                      @click="() => header.column.toggleSorting(true)" 
+                      :title="`Sort Descending by ${header.column.id}`"
+                      class="p-0.5 rounded hover:bg-primary/20 transition-all duration-200 transform hover:scale-110"
+                      :class="{ 'text-primary bg-primary/10': header.column.getIsSorted() === 'desc', 'text-muted-foreground hover:text-foreground': header.column.getIsSorted() !== 'desc' }"
+                    >
+                      <ArrowDown class="h-3 w-3" />
+                    </button>
+                  </div>
                 </template>
               </div>
             </TableHead>
@@ -26,19 +38,35 @@
               v-for="row in table.getRowModel().rows"
               :key="row.id"
               :data-state="row.getIsSelected() && 'selected'"
+              class="transition-all duration-200 group"
               :class="{
-                'bg-blue-50 dark:bg-blue-900/30': row.getIsSelected(),
-                'hover:bg-muted/50': true
+                'bg-primary/5 border-primary/20 shadow-sm': row.getIsSelected(),
+                'hover:bg-muted/30 hover:shadow-sm': !row.getIsSelected()
               }"
             >
-              <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id" :class="getCellClass(cell.column.id)">
+              <TableCell 
+                v-for="cell in row.getVisibleCells()" 
+                :key="cell.id" 
+                :class="getCellClass(cell.column.id)"
+                class="transition-colors duration-200 group-hover:bg-inherit"
+              >
                 <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
               </TableCell>
             </TableRow>
           </template>
           <template v-else>
             <TableRow>
-              <TableCell :colspan="tableColumns.length" class="h-24 text-center"> No commits found. </TableCell>
+              <TableCell :colspan="tableColumns.length" class="h-32 text-center">
+                <div class="flex flex-col items-center space-y-4 py-8">
+                  <div class="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-code-commit text-2xl text-muted-foreground"></i>
+                  </div>
+                  <div class="text-center">
+                    <h3 class="text-lg font-semibold text-foreground mb-2">No commits found</h3>
+                    <p class="text-muted-foreground max-w-md">There are no commits matching the current filters. Try adjusting your search criteria or date range.</p>
+                  </div>
+                </div>
+              </TableCell>
             </TableRow>
           </template>
         </TableBody>

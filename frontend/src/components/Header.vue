@@ -16,7 +16,7 @@
           </Button>
 
           <!-- Unauthenticated: Login Button -->
-          <Button v-if="!authStore.isUserAuthenticated" variant="default" @click="toggleModal" :disabled="authStore.isLoading" class="relative overflow-hidden transition-all duration-300 hover:scale-105">
+          <Button v-if="!authStore.isUserAuthenticated" variant="default" @click="toggleModal" :disabled="authStore.isLoading" class="relative overflow-hidden transition-all duration-300 hover:scale-105" data-login-button>
             <span v-if="authStore.isLoading" class="mr-2">
               <div class="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
             </span>
