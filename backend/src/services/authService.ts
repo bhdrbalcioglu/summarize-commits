@@ -8,61 +8,25 @@ import {
   UserJwtPayload,
   OAuthUserProfile,
 } from "../types/index.js";
+import userRepository from "./userRepo.js";
+import { tokenVault } from "./tokenVault.js";
 
-// generateToken - (remains the same as your last version)
+/**
+ * @deprecated Since Phase 4: JWT functions replaced by Supabase Auth
+ * These functions are kept for backward compatibility during migration
+ * Will be removed in a future version
+ */
+
+// Legacy generateToken - DEPRECATED: Use Supabase Auth instead
 export const generateToken = (payload: UserJwtPayload): string => {
-  if (!environment.jwt.secret) {
-    console.error("🔴 JWT_SECRET is not defined. Cannot generate token.");
-    throw new Error("JWT secret is missing, server configuration error.");
-  }
-  const expiresInSeconds = Math.floor(
-    ms(
-      environment.jwt.expiresIn as `${number}${
-        | "ms"
-        | "s"
-        | "m"
-        | "h"
-        | "d"
-        | "w"
-        | "y"}`
-    ) / 1000
-  );
-  if (isNaN(expiresInSeconds) || expiresInSeconds <= 0) {
-    console.error(
-      `🔴 Invalid JWT_EXPIRES_IN value: "${environment.jwt.expiresIn}". Could not convert to positive number of seconds.`
-    );
-    throw new Error(
-      "Invalid JWT expiresIn configuration. Must be a valid timespan string like '1d', '7 days', '2h'."
-    );
-  }
-  const options: SignOptions = {
-    expiresIn: expiresInSeconds,
-  };
-  return jwt.sign(payload, environment.jwt.secret as Secret, options);
+  console.warn("⚠️ DEPRECATED: generateToken() - Use Supabase Auth instead");
+  throw new Error("JWT generation disabled. Use Supabase Auth for authentication.");
 };
 
-// verifyToken - (remains the same as your last version)
+// Legacy verifyToken - DEPRECATED: Use Supabase Auth instead  
 export const verifyToken = (token: string): UserJwtPayload => {
-  if (!environment.jwt.secret) {
-    console.error("🔴 JWT_SECRET is not defined. Cannot verify token.");
-    throw new Error("JWT secret is missing, server configuration error.");
-  }
-  try {
-    const decoded = jwt.verify(
-      token,
-      environment.jwt.secret as Secret
-    ) as UserJwtPayload;
-    return decoded;
-  } catch (error) {
-    console.error("JWT verification failed:", error);
-    const jwtError = error as Error;
-    if (jwtError.name === "TokenExpiredError") {
-      throw new Error("Token expired.");
-    } else if (jwtError.name === "JsonWebTokenError") {
-      throw new Error(`Invalid token: ${jwtError.message}`);
-    }
-    throw new Error("Token verification failed due to an unexpected error.");
-  }
+  console.warn("⚠️ DEPRECATED: verifyToken() - Use Supabase Auth instead");
+  throw new Error("JWT verification disabled. Use Supabase Auth for authentication.");
 };
 
 interface StoredUser extends User {

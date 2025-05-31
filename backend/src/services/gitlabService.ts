@@ -42,11 +42,11 @@ export const exchangeCodeForGitLabToken = async (
 }> => {
   try {
     const params = new URLSearchParams({
-      client_id: environment.gitlab.clientId,
-      client_secret: environment.gitlab.clientSecret,
+      client_id: environment.GITLAB_CLIENT_ID!,
+      client_secret: environment.GITLAB_CLIENT_SECRET!,
       code,
       grant_type: "authorization_code",
-      redirect_uri: environment.gitlab.redirectUri,
+      redirect_uri: environment.GITLAB_REDIRECT_URI!,
     });
     const response = await axios.post(
       "https://gitlab.com/oauth/token",

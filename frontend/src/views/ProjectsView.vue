@@ -3,7 +3,7 @@
   <div class="min-h-screen bg-background">
     <!-- Modern backdrop with subtle pattern -->
     <div class="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5"></div>
-    
+
     <div class="relative p-4 sm:p-6 lg:p-8">
       <!-- Main content card container with glassmorphism -->
       <div class="max-w-7xl mx-auto">
@@ -21,13 +21,7 @@
             <div class="flex flex-col md:flex-row md:justify-between items-center space-y-4 md:space-y-0">
               <div class="w-full md:w-1/3">
                 <div class="relative">
-                  <input 
-                    type="text" 
-                    :value="projectListStore.searchTerm" 
-                    @input="handleSearchInput" 
-                    placeholder="Search projects..." 
-                    class="w-full pl-10 pr-4 py-3 border border-border rounded-lg shadow-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200 hover:shadow-md"
-                  />
+                  <input type="text" :value="projectListStore.searchTerm" @input="handleSearchInput" placeholder="Search projects..." class="w-full pl-10 pr-4 py-3 border border-border rounded-lg shadow-sm bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-all duration-200 hover:shadow-md" />
                   <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"></i>
                 </div>
               </div>
@@ -40,22 +34,17 @@
             <div v-if="projectListStore.isLoadingProjects" class="p-6">
               <SkeletonTable :rows="10" :cols="5" />
             </div>
-            
+
             <div v-else-if="projectListStore.projectListError" class="p-6">
               <div class="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg p-4 flex items-center justify-between">
                 <div class="flex items-center space-x-3">
                   <i class="fa-solid fa-exclamation-triangle text-lg"></i>
                   <span class="font-medium">Error: {{ projectListStore.projectListError }}</span>
                 </div>
-                <button 
-                  @click="fetchData" 
-                  class="px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
-                >
-                  <i class="fa-solid fa-refresh mr-2"></i>Retry
-                </button>
+                <button @click="fetchData" class="px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 transition-all duration-200 font-medium shadow-sm hover:shadow-md"><i class="fa-solid fa-refresh mr-2"></i>Retry</button>
               </div>
             </div>
-            
+
             <div v-else-if="!projectListStore.hasProjects && !projectListStore.isLoadingProjects" class="p-12 text-center">
               <div class="flex flex-col items-center space-y-4">
                 <div class="w-16 h-16 bg-muted rounded-full flex items-center justify-center">
@@ -65,7 +54,7 @@
                 <p class="text-muted-foreground max-w-md">Try adjusting your search criteria or check your repository access.</p>
               </div>
             </div>
-            
+
             <div v-else>
               <DataTable :projects="projectListStore.projects" @rowClick="navigateToProjectPage" />
             </div>
@@ -79,11 +68,7 @@
                 <div class="flex items-center space-x-3">
                   <span class="text-sm font-medium text-foreground">Items per page:</span>
                   <div class="relative">
-                    <select 
-                      :value="projectListStore.itemsPerPage" 
-                      @change="handleItemsPerPageChange" 
-                      class="appearance-none px-4 py-2 pr-8 border border-border rounded-md text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 hover:shadow-sm cursor-pointer"
-                    >
+                    <select :value="projectListStore.itemsPerPage" @change="handleItemsPerPageChange" class="appearance-none px-4 py-2 pr-8 border border-border rounded-md text-sm bg-card text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 hover:shadow-sm cursor-pointer">
                       <option :value="10">10</option>
                       <option :value="20">20</option>
                       <option :value="50">50</option>
@@ -96,11 +81,7 @@
                 <!-- Pagination controls -->
                 <div class="flex items-center space-x-2">
                   <!-- Previous button -->
-                  <button 
-                    class="group px-3 py-2 border border-border rounded-lg bg-card hover:bg-accent text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-sm disabled:hover:shadow-none" 
-                    @click="goToPage(projectListStore.currentPage - 1)" 
-                    :disabled="projectListStore.currentPage === 1"
-                  >
+                  <button class="group px-3 py-2 border border-border rounded-lg bg-card hover:bg-accent text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-sm disabled:hover:shadow-none" @click="goToPage(projectListStore.currentPage - 1)" :disabled="projectListStore.currentPage === 1">
                     <i class="fa-solid fa-chevron-left transition-transform group-hover:-translate-x-0.5"></i>
                   </button>
 
@@ -112,19 +93,15 @@
                   </div>
 
                   <!-- Next button -->
-                  <button 
-                    class="group px-3 py-2 border border-border rounded-lg bg-card hover:bg-accent text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-sm disabled:hover:shadow-none" 
-                    @click="goToPage(projectListStore.currentPage + 1)" 
-                    :disabled="projectListStore.currentPage >= projectListStore.totalPages"
-                  >
+                  <button class="group px-3 py-2 border border-border rounded-lg bg-card hover:bg-accent text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:shadow-sm disabled:hover:shadow-none" @click="goToPage(projectListStore.currentPage + 1)" :disabled="projectListStore.currentPage >= projectListStore.totalPages">
                     <i class="fa-solid fa-chevron-right transition-transform group-hover:translate-x-0.5"></i>
                   </button>
                 </div>
 
                 <!-- Page count info -->
                 <div class="text-sm text-muted-foreground">
-                  Showing {{ (projectListStore.currentPage - 1) * projectListStore.itemsPerPage + 1 }} to 
-                  {{ Math.min(projectListStore.currentPage * projectListStore.itemsPerPage, projectListStore.totalProjects || 0) }} 
+                  Showing {{ (projectListStore.currentPage - 1) * projectListStore.itemsPerPage + 1 }} to
+                  {{ Math.min(projectListStore.currentPage * projectListStore.itemsPerPage, projectListStore.totalProjects || 0) }}
                   of {{ projectListStore.totalProjects || 0 }} results
                 </div>
               </div>
@@ -221,7 +198,8 @@ onMounted(() => {
     projectListStore.setGroupIdCriteria(initialGroupId) // This might trigger a fetch
   }
   // Always fetch if no projects or if group criteria just set and didn't auto-fetch
-  if (projectListStore.projects.length === 0 || initialGroupId !== projectListStore.currentGroupId) {
+  const hasProjects = Array.isArray(projectListStore.projects) && projectListStore.projects.length > 0
+  if (!hasProjects || initialGroupId !== projectListStore.currentGroupId) {
     fetchData()
   }
 })
@@ -235,11 +213,12 @@ watch(
     const groupIdFromRoute = route.query.groupId as string | undefined
     const targetGroupId = groupIdFromRoute || groupStore.selectedGroupId
 
-    if (projectListStore.currentGroupId !== (targetGroupId || null) || projectListStore.projects.length === 0) {
+    const hasProjects = Array.isArray(projectListStore.projects) && projectListStore.projects.length > 0
+    if (projectListStore.currentGroupId !== (targetGroupId || null) || !hasProjects) {
       projectListStore.setGroupIdCriteria(targetGroupId || null)
       // fetchProjects will be called by setGroupIdCriteria if group changes,
       // or if it doesn't, we might need to call it if projects are empty
-      if (projectListStore.currentGroupId === (targetGroupId || null) && projectListStore.projects.length === 0 && !projectListStore.isLoadingProjects) {
+      if (projectListStore.currentGroupId === (targetGroupId || null) && !hasProjects && !projectListStore.isLoadingProjects) {
         projectListStore.fetchProjects()
       }
     }

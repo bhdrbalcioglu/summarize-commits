@@ -35,8 +35,22 @@ class CommitService {
       throw new Error(`Unsupported provider: ${provider}`)
     }
 
-    const response = await apiClient.get<Branch[]>(endpoint)
-    return response.data
+    const response = await apiClient.get<any>(endpoint)
+    
+    // Handle potential response wrapping from backend
+    let branchesData = response.data
+    if (branchesData && typeof branchesData === 'object' && 'status' in branchesData && 'data' in branchesData) {
+      console.log(`[CommitService] Backend response is wrapped, extracting data from status: ${branchesData.status}`)
+      branchesData = branchesData.data
+    }
+    
+    // Ensure we have an array
+    if (!Array.isArray(branchesData)) {
+      console.error(`[CommitService] Expected branches array, got:`, typeof branchesData, branchesData)
+      throw new Error('Invalid branches data received from backend')
+    }
+    
+    return branchesData
   }
 
   async fetchCommits(
@@ -69,18 +83,20 @@ class CommitService {
       throw new Error(`Unsupported provider: ${provider}`)
     }
 
-    const response = await apiClient.get<{
-      commits: Commit[]
-      isMore?: boolean
-      totalCommits?: number
-      currentPage?: number
-    }>(endpoint, { params })
+    const response = await apiClient.get<any>(endpoint, { params })
+
+    // Handle potential response wrapping from backend
+    let commitsData = response.data
+    if (commitsData && typeof commitsData === 'object' && 'status' in commitsData && 'data' in commitsData) {
+      console.log(`[CommitService] Backend response is wrapped, extracting data from status: ${commitsData.status}`)
+      commitsData = commitsData.data
+    }
 
     return {
-      commits: response.data.commits || [],
-      hasMore: response.data.isMore ?? false,
-      totalCommits: response.data.totalCommits,
-      currentPage: response.data.currentPage
+      commits: commitsData.commits || [],
+      hasMore: commitsData.isMore ?? false,
+      totalCommits: commitsData.totalCommits,
+      currentPage: commitsData.currentPage
     }
   }
 
@@ -114,13 +130,21 @@ class CommitService {
     console.log('📤 [commitService] Making API request...')
 
     try {
-      const response = await apiClient.get<CommitDetail>(endpoint)
+      const response = await apiClient.get<any>(endpoint)
       console.log('✅ [commitService] API response received')
       console.log('📊 [commitService] Response data keys:', Object.keys(response.data))
-      console.log('📁 [commitService] Files changed count:', response.data.files_changed?.length)
-      console.log('👤 [commitService] Author:', response.data.author?.name)
       
-      return response.data
+      // Handle potential response wrapping from backend
+      let commitDetailData = response.data
+      if (commitDetailData && typeof commitDetailData === 'object' && 'status' in commitDetailData && 'data' in commitDetailData) {
+        console.log(`[CommitService] Backend response is wrapped, extracting data from status: ${commitDetailData.status}`)
+        commitDetailData = commitDetailData.data
+      }
+      
+      console.log('📁 [commitService] Files changed count:', commitDetailData.files_changed?.length)
+      console.log('👤 [commitService] Author:', commitDetailData.author?.name)
+      
+      return commitDetailData
     } catch (error) {
       console.error('💥 [commitService] Error fetching commit detail:', error)
       throw error

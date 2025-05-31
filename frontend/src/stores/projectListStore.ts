@@ -74,7 +74,7 @@ export const useProjectListStore = defineStore('projectList', {
   }),
   getters: {
     selectedProject: (state): Project | null => {
-      if (!state.selectedProjectId) return null;
+      if (!state.selectedProjectId || !state.projects) return null;
       return state.projects.find((p) => String(p.id) === state.selectedProjectId) || null;
     },
     // This getter constructs the params for the backend API call
@@ -86,12 +86,12 @@ export const useProjectListStore = defineStore('projectList', {
       page: state.currentPage,
       perPage: state.itemsPerPage,
     }),
-    hasProjects: (state): boolean => state.projects.length > 0,
+    hasProjects: (state): boolean => Array.isArray(state.projects) && state.projects.length > 0,
     isLoadingProjects: (state): boolean => state.isLoading,
     projectListError: (state): string | null => state.error,
     
     // Latest Projects Getters
-    hasLatestProjects: (state): boolean => state.latestProjects.length > 0,
+    hasLatestProjects: (state): boolean => Array.isArray(state.latestProjects) && state.latestProjects.length > 0,
     isLoadingLatestProjects: (state): boolean => state.isLoadingLatest,
     latestProjectsListError: (state): string | null => state.latestProjectsError,
   },
@@ -168,9 +168,22 @@ export const useProjectListStore = defineStore('projectList', {
         this.currentPage = response.data.currentPage || this.currentPage;
         this.itemsPerPage = response.data.perPage || this.itemsPerPage; // Ensure backend sends this as 'perPage'
       } catch (err: any) {
-        const defaultMessage = `Failed to fetch projects for ${authStore.currentProvider}.`;
-        this.error = err.response?.data?.message || err.message || defaultMessage;
-        console.error(this.error, err);
+        console.error('❌ [PROJECT LIST STORE] Error fetching projects:', err);
+        
+        // Enhanced error handling for OAuth scope issues
+        let errorMessage = '';
+        if (err.response?.status === 403) {
+          if (err.response?.data?.message?.includes('lacks repository access')) {
+            errorMessage = `GitHub authentication needs repository access. Please log out and log back in to grant the required permissions.`;
+          } else {
+            errorMessage = err.response?.data?.message || 'Access denied. Please check your authentication.';
+          }
+        } else {
+          const defaultMessage = `Failed to fetch projects for ${authStore.currentProvider}.`;
+          errorMessage = err.response?.data?.message || err.message || defaultMessage;
+        }
+        
+        this.error = errorMessage;
         this.projects = [];
         this.totalProjects = 0;
         this.totalPages = 0;
@@ -234,9 +247,22 @@ export const useProjectListStore = defineStore('projectList', {
 
         this.latestProjects = response.data.projects;
       } catch (err: any) {
-        const defaultMessage = `Failed to fetch latest projects for ${authStore.currentProvider}.`;
-        this.latestProjectsError = err.response?.data?.message || err.message || defaultMessage;
-        console.error(this.latestProjectsError, err);
+        console.error('❌ [PROJECT LIST STORE] Error fetching latest projects:', err);
+        
+        // Enhanced error handling for OAuth scope issues  
+        let errorMessage = '';
+        if (err.response?.status === 403) {
+          if (err.response?.data?.message?.includes('lacks repository access')) {
+            errorMessage = `GitHub authentication needs repository access. Please log out and log back in to grant the required permissions.`;
+          } else {
+            errorMessage = err.response?.data?.message || 'Access denied. Please check your authentication.';
+          }
+        } else {
+          const defaultMessage = `Failed to fetch latest projects for ${authStore.currentProvider}.`;
+          errorMessage = err.response?.data?.message || err.message || defaultMessage;
+        }
+        
+        this.latestProjectsError = errorMessage;
         this.latestProjects = [];
       } finally {
         this.isLoadingLatest = false;

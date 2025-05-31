@@ -1,6 +1,7 @@
 // backend/src/routes/gitlabRoutes.ts
 import express, { Router } from "express";
-import { isAuthenticated } from "../middleware/isAuthenticated.js"; // Your authentication middleware
+import { isAuthenticated } from "../middleware/isAuthenticated.js";
+import { attachSupabaseClient } from "../middleware/supabaseClient.js";
 import {
   getUserGroups,
   getProjects,
@@ -15,17 +16,16 @@ import {
 
 const router: Router = express.Router();
 
-// All routes in this file will be protected and require authentication
-router.use(isAuthenticated); // Apply middleware to all routes in this router
+// All routes require authentication and Supabase client access
+router.use(isAuthenticated);
+router.use(attachSupabaseClient);
 
 // --- GitLab Data Routes ---
 
 // Get groups for the authenticated user
 router.get("/user/groups", getUserGroups);
 
-// Get projects
-// - For the authenticated user (memberships) if no groupId is provided
-// - For a specific group if groupId is provided as a query parameter
+// Get projects - supports user projects and group projects
 // Query params: groupId, orderBy, sort, search, page, perPage
 router.get("/projects", getProjects);
 
@@ -40,23 +40,26 @@ router.get("/projects/:projectId/branches", getProjectBranches);
 router.get("/projects/:projectId/commits", getProjectCommits);
 
 // Get details and diffs for a specific commit
-router.get(
-  "/projects/:projectId/commits/:commitSha/details",
-  getCommitDetailsAndDiffs
-);
+router.get("/projects/:projectId/commits/:commitSha", getCommitDetailsAndDiffs);
 
-// Get commit bundles for AI processing (expects commitIds in request body)
-router.post(
-  "/projects/:projectId/commits-bundle",
-  getProjectCommitBundlesForAI
-);
+// Get commit bundles for AI processing (POST with commitIds in body)
+router.post("/projects/:projectId/commits-bundle", getProjectCommitBundlesForAI);
 
-// Get repository file tree
-// Query params: path (optional), ref (optional, e.g., branch name or commit SHA)
-router.get("/projects/:projectId/repository/tree", getProjectFileTree);
+// Get project file tree
+// Updated to match controller parameter expectations
+router.get("/projects/:projectId/repository/tree/:treeShaOrBranchName", getProjectFileTree);
 
-// Get raw content of a file
-// Query params: filePath (required), ref (required, e.g., branch name or commit SHA)
+// Get file content
+// Query params: filePath (required), ref (optional)
 router.get("/projects/:projectId/repository/file-content", getFileContent);
+
+// Health check
+router.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "GitLab API service is healthy",
+    timestamp: new Date().toISOString()
+  });
+});
 
 export default router;

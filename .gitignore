@@ -31,3 +31,6 @@ docs
 
 codebase_content.md
 generate_codebase_docs.js
+supabase_auth_docs.md
+apply_oauth_schema.js
+backend/supabase_schema.sql

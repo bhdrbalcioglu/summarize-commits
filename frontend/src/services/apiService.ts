@@ -4,10 +4,10 @@ import { useAuthStore } from '@/stores/authStore' // Still needed for response i
 // import router from '@/router'; // If you need to redirect from interceptor
 
 // Ensure this matches the variable name in your .env file
-const BACKEND_API_URL = import.meta.env.BACKEND_API_URL || 'http://localhost:3001/api'
+const API_ROOT = `${import.meta.env.VITE_API_BASE_URL}/api`
 
 const apiClient = axios.create({
-  baseURL: BACKEND_API_URL,
+  baseURL: API_ROOT,
   headers: {
     'Content-Type': 'application/json'
   },
@@ -42,18 +42,19 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config
     const authStore = useAuthStore() // Access outside setup in Pinia requires this pattern
 
-    // Specifically check for 401 (Unauthorized) or 403 (Forbidden)
-    // And ensure we don't get into an infinite loop if a retry mechanism was in place.
-    if ((error.response?.status === 401 || error.response?.status === 403) && !originalRequest._retryAttempted) {
-      originalRequest._retryAttempted = true // Mark to prevent potential infinite loops with retries
+    // Only logout on auth-specific endpoints, not all 401/403 errors
+    const isAuthEndpoint = originalRequest.url?.includes('/auth/') || originalRequest.url?.includes('/me')
 
-      // If the error is on a '/auth/me' call, it often means the session is invalid/expired from the start.
-      // Or if any other API call returns 401/403.
-      if (authStore.isAuthenticated) {
-        // Only trigger logout if user was thought to be authenticated
-        console.warn(`API request to ${originalRequest.url} failed with ${error.response.status}. Logging out.`)
+    if ((error.response?.status === 401 || error.response?.status === 403) && !originalRequest._retryAttempted) {
+      originalRequest._retryAttempted = true
+
+      if (isAuthEndpoint && authStore.isUserAuthenticated) {
+        // Only trigger logout if it's an auth endpoint failure
+        console.warn(`Auth endpoint ${originalRequest.url} failed with ${error.response.status}. Logging out.`)
         await authStore.logout() // Ensure logout clears state and redirects to login
-        // The logout action in your authStore should handle router.push('/login')
+      } else {
+        // For non-auth endpoints, just log the error but don't logout
+        console.warn(`API request to ${originalRequest.url} failed with ${error.response.status}. Not logging out.`)
       }
     }
     return Promise.reject(error)
@@ -61,3 +62,4 @@ apiClient.interceptors.response.use(
 )
 
 export default apiClient
+export { apiClient as apiService }

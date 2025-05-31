@@ -84,7 +84,7 @@ const navigateToHome = () => {
 }
 
 const handleLogin = async (provider: 'gitlab' | 'github') => {
-  await authStore.loginWithProvider(provider)
+  await authStore.login(provider)
 }
 
 const handleThemeToggle = () => {

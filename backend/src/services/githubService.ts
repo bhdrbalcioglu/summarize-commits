@@ -85,10 +85,10 @@ export const exchangeCodeForGitHubToken = async (
     const response = await axios.post(
       "https://github.com/login/oauth/access_token",
       {
-        client_id: environment.github.clientId,
-        client_secret: environment.github.clientSecret,
+        client_id: environment.GITHUB_CLIENT_ID!,
+        client_secret: environment.GITHUB_CLIENT_SECRET!,
         code,
-        redirect_uri: environment.github.redirectUri,
+        redirect_uri: environment.GITHUB_REDIRECT_URI!,
       },
       {
         headers: {
@@ -130,7 +130,7 @@ export const getGitHubUserProfile = async (
     // To get primary verified email, might need 'user:email' scope and a call to /user/emails
     // For simplicity, we use the email from /user endpoint if available
     let primaryEmail = ghUser.email;
-    if (!primaryEmail && environment.github.scopes.includes("user:email")) {
+    if (!primaryEmail) {
       try {
         const { data: emails } = await githubAPI.get(
           "/user/emails",

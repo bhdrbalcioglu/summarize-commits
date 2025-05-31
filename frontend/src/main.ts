@@ -24,16 +24,7 @@ const themeStore = useThemeStore()
 // Initialize theme first (synchronous)
 themeStore.initializeTheme()
 
-// initializeAuth asenkron bir işlem olduğu için .then() ile devam et
-authStore
-  .initializeAuth()
-  .then(() => {
-    console.log('using user', authStore.user, authStore.isUserAuthenticated, authStore.isLoading) // Eğer hata olursa, authStore'daki değerleri logla (örnek amaçl
-    app.use(router) // Router'ı auth işlemi bittikten sonra ekle
-    app.mount('#app')
-  })
-  .catch((error) => {
-    console.error('Error during app initialization:', error)
-    app.use(router) // Hata olsa bile router'ı yükle
-    app.mount('#app') // Ve app'i mount et
-  })
+// Let the router guard handle auth initialization to avoid race conditions
+console.log('🚀 [MAIN] App initialization - auth will be handled by router guard')
+app.use(router) // Install router first
+app.mount('#app') // Mount app immediately

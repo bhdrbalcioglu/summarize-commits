@@ -397,14 +397,14 @@ class OpenAIService implements AISummarizationService {
   private concurrentProcessor: ConcurrentProcessor;
 
   constructor() {
-    if (!environment.openaiApiKey) {
+    if (!environment.OPENAI_API_KEY) {
       throw new Error(
         "OpenAI API Key is not configured. AI features will not work."
       );
     }
 
     this.client = new OpenAI({
-      apiKey: environment.openaiApiKey,
+      apiKey: environment.OPENAI_API_KEY,
     });
 
     this.rateLimitManager = new RateLimitManager();

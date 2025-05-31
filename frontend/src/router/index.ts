@@ -22,6 +22,19 @@ const routes: Array<RouteRecordRaw> = [
     component: HomeView,
     meta: { requiresAuth: false, guestOnly: true } // GuestOnly: if logged in, redirect away from home/login
   },
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/LoginView.vue'),
+    meta: { requiresAuth: false, guestOnly: true }
+  },
+  // OAuth Callback Route for Supabase Auth
+  {
+    path: '/auth/callback',
+    name: 'AuthCallback',
+    component: () => import('../views/OAuthCallback.vue'),
+    meta: { requiresAuth: false }
+  },
   // OAuth Callback Routes from Backend:
   // The backend now handles the OAuth code exchange and then redirects to a standard frontend route.
   // These specific frontend callback views might no longer be directly hit or needed in the same way.
@@ -136,24 +149,56 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
-  // Ensure auth state is initialized, especially on first load or hard refresh
-  // initializeAuth now calls fetchCurrentUser which updates isAuthenticated
-  if (!authStore.user && !authStore.isLoading) {
-    // Only if not already checked and not currently loading
+  // Quick guard exit for same route navigation (performance optimization)
+  if (to.fullPath === from.fullPath) {
+    console.log(`🛣️ [ROUTER GUARD] Same route navigation detected, skipping guard`)
+    return next()
+  }
+
+  console.log(`🛣️ [ROUTER GUARD] Navigation: ${String(from.name) || from.path} → ${String(to.name) || to.path}`)
+  console.log(`🛣️ [ROUTER GUARD] Route meta:`, {
+    requiresAuth: to.meta.requiresAuth,
+    guestOnly: to.meta.guestOnly
+  })
+  console.log(`🛣️ [ROUTER GUARD] Auth state:`, {
+    isAuthenticated: authStore.isUserAuthenticated,
+    isLoading: authStore.isLoading,
+    hasUser: !!authStore.user
+  })
+
+  // Skip auth checks for the callback route as it handles its own authentication
+  if (to.name === 'AuthCallback') {
+    console.log(`🛣️ [ROUTER GUARD] Auth callback route detected, skipping auth checks`)
+    next()
+    return
+  }
+
+  // Initialize auth only if we haven't tried yet and user is not authenticated
+  if (!authStore.user && !authStore.isLoading && !authStore._hasTriedFetchingUser) {
+    console.log(`🛣️ [ROUTER GUARD] No user data and haven't tried fetching yet, initializing auth...`)
     await authStore.initializeAuth()
+    console.log(`🛣️ [ROUTER GUARD] Auth initialization complete. New state:`, {
+      isAuthenticated: authStore.isUserAuthenticated,
+      hasUser: !!authStore.user
+    })
+  } else {
+    console.log(`🛣️ [ROUTER GUARD] Auth already attempted or user exists, skipping init`)
   }
 
   const requiresAuth = to.meta.requiresAuth
   const guestOnly = to.meta.guestOnly // For routes like login/home that authed users should skip
 
   if (requiresAuth && !authStore.isUserAuthenticated) {
-    // If route requires auth and user is not authenticated, redirect to home (which might be login)
-    next({ name: 'Home', query: { redirect: to.fullPath } }) // Save redirect path
+    console.log(`🛣️ [ROUTER GUARD] Route requires auth but user not authenticated, redirecting to login`)
+    // If route requires auth and user is not authenticated, redirect to login page
+    next({ name: 'Login', query: { redirect: to.fullPath } }) // Save redirect path
   } else if (guestOnly && authStore.isUserAuthenticated) {
+    console.log(`🛣️ [ROUTER GUARD] Guest-only route but user authenticated, redirecting to user page`)
     // If route is for guests only (like Home/Login page) and user IS authenticated,
     // redirect to the User page regardless of provider.
     next({ name: 'User' })
   } else {
+    console.log(`🛣️ [ROUTER GUARD] Navigation allowed, proceeding to ${String(to.name) || to.path}`)
     next()
   }
 })

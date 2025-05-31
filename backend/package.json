@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "dependencies": {
+    "@supabase/supabase-js": "^2.49.8",
+    "@types/cookie-parser": "^1.4.8",
+    "@types/uuid": "^10.0.0",
     "accepts": "^2.0.0",
     "acorn": "^8.14.1",
     "acorn-walk": "^8.3.4",
@@ -25,6 +28,7 @@
     "content-disposition": "^1.0.0",
     "content-type": "^1.0.5",
     "cookie": "^0.7.2",
+    "cookie-parser": "^1.4.7",
     "cookie-signature": "^1.2.2",
     "cors": "^2.8.5",
     "create-require": "^1.1.1",
@@ -117,6 +121,7 @@
     "undefsafe": "^2.0.5",
     "undici-types": "^6.21.0",
     "unpipe": "^1.0.0",
+    "uuid": "^11.1.0",
     "v8-compile-cache-lib": "^3.0.1",
     "vary": "^1.1.2",
     "wrappy": "^1.0.2",
@@ -125,7 +130,15 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon --watch src --ext ts,json --exec tsx src/index.ts"
+    "dev": "tsx watch src/index.ts --clear-screen=false",
+    "start": "tsx src/index.ts",
+    "build": "tsc",
+    "migrate": "npm run db:push",
+    "db:push": "supabase db push",
+    "db:reset": "supabase db reset",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "supabase status"
   },
   "keywords": [],
   "author": "",
@@ -139,7 +152,6 @@
     "@types/ms": "^2.1.0",
     "@types/node": "^22.15.21",
     "nodemon": "^3.1.10",
-    "ts-node": "^10.9.2",
     "tsx": "^4.19.4"
   }
 }

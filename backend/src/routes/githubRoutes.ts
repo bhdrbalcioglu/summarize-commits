@@ -1,6 +1,7 @@
 // backend/src/routes/githubRoutes.ts
 import express, { Router } from "express";
 import { isAuthenticated } from "../middleware/isAuthenticated.js";
+import { attachSupabaseClient } from "../middleware/supabaseClient.js";
 import {
   getUserOrganizations,
   getRepositories,
@@ -15,60 +16,52 @@ import {
 
 const router: Router = express.Router();
 
-// All routes in this file will be protected and require authentication
-router.use(isAuthenticated); // Apply middleware to all routes in this router
+// All routes require authentication and Supabase client access
+router.use(isAuthenticated);
+router.use(attachSupabaseClient);
 
 // --- GitHub Data Routes ---
 
 // Get organizations for the authenticated user
 router.get("/user/orgs", getUserOrganizations);
 
-// Get repositories
-// - For the authenticated user if no orgLogin is provided
-// - For a specific organization if orgLogin is provided as a query parameter
+// Get repositories - supports both user repos and org repos
 // Query params: orgLogin, orderBy, sort, search, page, perPage
-router.get("/repos", getRepositories); // Or /user/repos and /orgs/:orgLogin/repos for more explicitness
+router.get("/repos", getRepositories);
 
-// Add /projects route that maps to the same getRepositories function for frontend compatibility
-router.get("/projects", getRepositories); // Frontend expects this endpoint
-
-// To explicitly list repos for an organization (if you prefer separate routes)
-// router.get("/orgs/:orgLogin/repos", getRepositories); // Controller would need to handle orgLogin from params
+// Frontend compatibility endpoint
+router.get("/projects", getRepositories);
 
 // Get details for a specific repository
-// Uses :owner and :repoName as path parameters
 router.get("/repos/:owner/:repoName", getRepositoryDetails);
 
 // Get branches for a specific repository
 router.get("/repos/:owner/:repoName/branches", getRepositoryBranches);
 
 // Get commits for a specific repository
-// Query params: branch (sha), page, perPage, since, until, author, path
+// Query params: branch, page, perPage, since, until, author, path
 router.get("/repos/:owner/:repoName/commits", getRepositoryCommits);
 
 // Get details and diffs for a specific commit
-router.get(
-  "/repos/:owner/:repoName/commits/:commitSha", // GitHub typically doesn't have '/details' in the path
-  getCommitDetailsAndDiffs
-);
+router.get("/repos/:owner/:repoName/commits/:commitSha", getCommitDetailsAndDiffs);
 
-// Get commit bundles for AI processing (expects commitIds in request body)
-router.post(
-  "/repos/:owner/:repoName/commits-bundle",
-  getRepositoryCommitBundlesForAI
-);
+// Get commit bundles for AI processing (POST with commitIds in body)
+router.post("/repos/:owner/:repoName/commits-bundle", getRepositoryCommitBundlesForAI);
 
 // Get repository file tree
-// :treeShaOrBranchName is a path parameter. Query: recursive
-router.get(
-  "/repos/:owner/:repoName/git/trees/:treeShaOrBranchName",
-  getRepositoryFileTree
-);
+router.get("/repos/:owner/:repoName/git/trees/:treeShaOrBranchName", getRepositoryFileTree);
 
-// Get raw content of a file
-// Query params: filePath (required), ref (optional, e.g., branch name or commit SHA)
-// Note: filePath is a query param here to handle slashes easily.
-// Alternatively, use a wildcard like /repos/:owner/:repoName/contents/* and extract path from req.params[0]
+// Get file content
+// Query params: filePath (required), ref (optional)
 router.get("/repos/:owner/:repoName/contents", getFileContent);
+
+// Health check
+router.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "GitHub API service is healthy",
+    timestamp: new Date().toISOString()
+  });
+});
 
 export default router;

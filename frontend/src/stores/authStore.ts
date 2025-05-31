@@ -1,140 +1,209 @@
 // frontend/src/stores/authStore.ts
 import { defineStore } from 'pinia'
-import apiClient from '@/services/apiService'
-import type { User } from './userStore'
-import { GLOBAL_KEYS, getStorageValue, setStorageValue, removeStorageValue } from '@/utils/localStorage'
-import { eventBus } from '@/utils/eventBus'
+import { ref, computed } from 'vue'
+import type { User } from '../stores/userStore'
+import apiService from '../services/apiService'
 
+// Types
 export type AuthProvider = 'github' | 'gitlab'
 
-export interface AuthState {
-  user: User | null
-  isLoading: boolean
-  authProvider: AuthProvider | null
-}
+export const useAuthStore = defineStore('auth', () => {
+  // State
+  const isAuthenticated = ref(false)
+  const isLoading = ref(false)
+  const user = ref<User | null>(null)
+  const authProvider = ref<AuthProvider | null>(null)
+  const _hasTriedFetchingUser = ref(false)
 
-// Helper to safely get stored user
-function getStoredUser(): User | null {
-  return getStorageValue<User | null>(GLOBAL_KEYS.AUTH_USER, null)
-}
+  // Computed getters
+  const hasUser = computed(() => !!user.value)
+  const isUserAuthenticated = computed(() => !!user.value)
+  const currentProvider = computed(() => authProvider.value)
+  const userId = computed(() => (user.value?.id ? String(user.value.id) : null))
+  const userName = computed(() => user.value?.name || null)
+  const userEmail = computed(() => user.value?.email || null)
 
-// Helper to safely get stored provider
-function getStoredProvider(): AuthProvider | null {
-  return getStorageValue<AuthProvider | null>(GLOBAL_KEYS.AUTH_PROVIDER, null)
-}
+  // Actions
+  const login = async (provider: 'github' | 'gitlab' = 'github') => {
+    console.log(`🔐 [AUTH STORE] Initiating login with provider: ${provider}`)
+    console.log('🔗 [AUTH STORE] Using frontend Supabase OAuth flow')
+    console.log(`🔗 [AUTH STORE] Provider: ${provider}`)
 
-export const useAuthStore = defineStore('auth', {
-  state: (): AuthState => ({
-    user: getStoredUser(), // Initialize from localStorage for quick UI rehydration
-    isLoading: false,
-    authProvider: getStoredProvider() // Initialize from localStorage
-  }),
-  getters: {
-    isUserAuthenticated: (state): boolean => !!state.user,
-    currentProvider: (state): AuthProvider | null => state.authProvider,
-    userId: (state): string | null => (state.user?.id ? String(state.user.id) : null),
-    userName: (state): string | null => state.user?.name || null,
-    userEmail: (state): string | null => state.user?.email || null
-  },
-  actions: {
-    async setUser(userData: User) {
-      const wasAuthenticated = this.isUserAuthenticated
-      const oldProvider = this.authProvider
-      
-      this.user = userData
-      this.authProvider = userData.provider as AuthProvider
-      
-      // Persist to localStorage for session continuity
-      setStorageValue(GLOBAL_KEYS.AUTH_USER, userData)
-      setStorageValue(GLOBAL_KEYS.AUTH_PROVIDER, userData.provider)
+    try {
+      const { supabase } = await import('@/lib/supabaseClient')
 
-      // Emit authentication status change event
-      await eventBus.emit('AUTH_STATUS_CHANGED', {
-        isAuthenticated: true,
-        provider: userData.provider as AuthProvider
+      // Define scopes based on provider to match backend configuration
+      const scopes =
+        provider === 'github'
+          ? 'user:email repo' // Match backend GitHub scopes for repository access
+          : 'read_user read_api read_repository' // Match backend GitLab scopes
+
+      console.log(`🔑 [AUTH STORE] Requesting OAuth scopes: ${scopes}`)
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: provider as any,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          scopes: scopes,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
+        }
       })
 
-      // If provider changed, emit additional events
-      if (oldProvider && oldProvider !== userData.provider) {
-        console.log(`Provider changed from ${oldProvider} to ${userData.provider}`)
-      }
-    },
-
-    async clearUser() {
-      const wasAuthenticated = this.isUserAuthenticated
-      
-      this.user = null
-      this.authProvider = null
-      removeStorageValue(GLOBAL_KEYS.AUTH_USER)
-      removeStorageValue(GLOBAL_KEYS.AUTH_PROVIDER)
-
-      // Emit events if user was previously authenticated
-      if (wasAuthenticated) {
-        await eventBus.emit('USER_LOGGED_OUT', undefined)
-        await eventBus.emit('AUTH_STATUS_CHANGED', {
-          isAuthenticated: false,
-          provider: null
-        })
-      }
-    },
-
-    async loginWithProvider(provider: AuthProvider): Promise<void> {
-      this.isLoading = true
-      try {
-        // Redirect to backend OAuth endpoint
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
-        window.location.href = `${baseUrl}/api/auth/login/${provider}`
-      } catch (error) {
-        console.error(`Failed to initiate ${provider} login:`, error)
-        this.isLoading = false
+      if (error) {
+        console.error('❌ [AUTH STORE] Supabase OAuth error:', error)
         throw error
       }
-      // Note: isLoading will remain true until page redirects or user returns
-    },
 
-    async fetchCurrentUser(): Promise<boolean> {
-      this.isLoading = true
-      try {
-        const response = await apiClient.get<User>('/auth/me')
-        await this.setUser(response.data)
-        return true
-      } catch (error: any) {
-        console.error('Failed to fetch current user:', error)
-        await this.clearUser()
-        return false
-      } finally {
-        this.isLoading = false
-      }
-    },
-
-    async logout(): Promise<void> {
-      this.isLoading = true
-      try {
-        await apiClient.post('/auth/logout')
-      } catch (error) {
-        console.error('Logout request failed:', error)
-      } finally {
-        await this.clearUser()
-        this.isLoading = false
-        // Redirect to home page
-        window.location.href = '/'
-      }
-    },
-
-    async initializeAuth(): Promise<void> {
-      // If user data is already in localStorage from a previous session,
-      // we still need to verify it's valid by calling fetchCurrentUser
-      if (this.user) {
-        // User data exists in state (loaded from localStorage), verify it's still valid
-        const isValid = await this.fetchCurrentUser()
-        if (!isValid) {
-          // If verification fails, clear the invalid data
-          await this.clearUser()
-        }
-      } else {
-        // No user data in state, try to fetch from server (in case of fresh login)
-        await this.fetchCurrentUser()
-      }
+      console.log(`🔗 [AUTH STORE] OAuth initiated successfully`)
+    } catch (error) {
+      console.error('❌ [AUTH STORE] Login failed:', error)
+      throw error
     }
+  }
+
+  const fetchCurrentUser = async () => {
+    console.log('👤 [AUTH STORE] Starting fetchCurrentUser...')
+    console.log(`👤 [AUTH STORE] Current state: isLoading=${isLoading.value}, hasUser=${hasUser.value}`)
+
+    _hasTriedFetchingUser.value = true // Mark that we've attempted to fetch
+
+    try {
+      isLoading.value = true
+
+      console.log('🍪 [AUTH STORE] Attempting cookie-based authentication...')
+      console.log(`            
+            
+           `)
+
+      // Use backend /me endpoint with credentials (cookies)
+      const response = await apiService.get('/auth/me')
+
+      if (response.data?.user) {
+        console.log('✅ [AUTH STORE] User authenticated via backend:', response.data.user.email)
+        user.value = response.data.user
+        isAuthenticated.value = true
+        authProvider.value = response.data.user.provider as AuthProvider
+        return response.data.user
+      } else {
+        console.log('⚠️ [AUTH STORE] No user data in response')
+        user.value = null
+        isAuthenticated.value = false
+        authProvider.value = null
+        return null
+      }
+    } catch (error: any) {
+      console.error('❌ [AUTH STORE] Authentication failed:', error)
+
+      // Clear auth state on error
+      user.value = null
+      isAuthenticated.value = false
+      authProvider.value = null
+
+      if (error.response?.status === 401) {
+        console.log('🔓 [AUTH STORE] User not authenticated (401)')
+      } else {
+        console.error('💥 [AUTH STORE] Unexpected error during auth check:', error.message)
+      }
+
+      throw error
+    } finally {
+      isLoading.value = false
+      console.log(`👤 [AUTH STORE] fetchCurrentUser completed. Authenticated: ${isAuthenticated.value}`)
+    }
+  }
+
+  const logout = async () => {
+    console.log('🚪 [AUTH STORE] Starting logout...')
+
+    try {
+      // Call backend logout endpoint
+      await apiService.post('/auth/logout')
+      console.log('✅ [AUTH STORE] Backend logout successful')
+    } catch (error) {
+      console.warn('⚠️ [AUTH STORE] Backend logout failed, continuing with local logout:', error)
+    }
+
+    // Clear local state
+    user.value = null
+    isAuthenticated.value = false
+    authProvider.value = null
+
+    console.log('🔓 [AUTH STORE] Local state cleared')
+
+    // Redirect to home
+    if (typeof window !== 'undefined') {
+      window.location.href = '/'
+    }
+  }
+
+  const handleCallback = async (searchParams: URLSearchParams) => {
+    console.log('🔗 [AUTH CALLBACK] Processing callback with search params')
+
+    try {
+      // Extract any error from URL
+      const error = searchParams.get('error')
+      const errorDescription = searchParams.get('error_description')
+
+      if (error) {
+        console.error('❌ [AUTH CALLBACK] OAuth error:', error, errorDescription)
+        throw new Error(`OAuth error: ${error} - ${errorDescription}`)
+      }
+
+      // Check if we have a success indicator
+      const success = searchParams.get('success')
+      if (success === 'true') {
+        console.log('✅ [AUTH CALLBACK] OAuth success detected')
+
+        // Fetch user data
+        await fetchCurrentUser()
+
+        console.log('✅ [AUTH CALLBACK] Callback processing completed successfully')
+        return true
+      } else {
+        console.warn('⚠️ [AUTH CALLBACK] No success indicator in callback')
+        return false
+      }
+    } catch (error) {
+      console.error('❌ [AUTH CALLBACK] Callback processing failed:', error)
+      throw error
+    }
+  }
+
+  // Initialize auth state
+  const initializeAuth = async () => {
+    console.log('🚀 [AUTH STORE] Initializing authentication state...')
+
+    try {
+      await fetchCurrentUser()
+    } catch (error) {
+      console.log('ℹ️ [AUTH STORE] No existing session found during initialization')
+    }
+  }
+
+  return {
+    // State
+    isAuthenticated,
+    isLoading,
+    user,
+    authProvider,
+    _hasTriedFetchingUser,
+
+    // Getters
+    hasUser,
+    isUserAuthenticated,
+    currentProvider,
+    userId,
+    userName,
+    userEmail,
+
+    // Actions
+    login,
+    logout,
+    fetchCurrentUser,
+    handleCallback,
+    initializeAuth
   }
 })

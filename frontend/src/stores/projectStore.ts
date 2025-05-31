@@ -74,7 +74,15 @@ export const useProjectStore = defineStore('project', {
         }
 
         const response = await apiClient.get<Project>(endpoint)
-        this.currentProject = response.data
+        
+        // Handle potential response wrapping from backend
+        let projectData = response.data
+        if (projectData && typeof projectData === 'object' && 'status' in projectData && 'data' in projectData) {
+          console.log(`[ProjectStore] Backend response is wrapped, extracting data from status: ${(projectData as any).status}`)
+          projectData = (projectData as any).data
+        }
+        
+        this.currentProject = projectData
         this.status = 'ready'
         return true
       } catch (err: any) {

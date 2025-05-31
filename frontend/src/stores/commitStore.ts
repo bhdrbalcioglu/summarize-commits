@@ -86,10 +86,18 @@ export const useCommitStore = defineStore('commit', () => {
 
   // Getters
   const activeBranch = computed(() => {
+    if (!Array.isArray(branches.value)) {
+      console.warn('🔍 [COMMIT STORE] branches.value is not an array:', typeof branches.value, branches.value)
+      return null
+    }
     return branches.value.find(branch => branch.name === selectedBranchName.value) || null
   })
 
   const defaultBranch = computed(() => {
+    if (!Array.isArray(branches.value)) {
+      console.warn('🔍 [COMMIT STORE] branches.value is not an array:', typeof branches.value, branches.value)
+      return null
+    }
     return branches.value.find(branch => branch.is_default) || branches.value[0] || null
   })
 
@@ -99,10 +107,73 @@ export const useCommitStore = defineStore('commit', () => {
   // Helper function to get project identifier for API calls
   const getProjectIdentifier = (project: any): string => {
     const authStore = useAuthStore()
-    if (authStore.currentProvider === 'github') {
-      return project.path_with_namespace || `${project.namespace?.name}/${project.name}`
+    
+    // Handle case where project is an API response wrapper with { status: "success", data: {...} }
+    let actualProject = project
+    if (project?.status === 'success' && project?.data) {
+      console.log('🔍 [COMMIT STORE] Detected API response wrapper, extracting data')
+      actualProject = project.data
     }
-    return String(project.id)
+    
+    console.log('🔍 [COMMIT STORE] getProjectIdentifier called with project:', {
+      provider: authStore.currentProvider,
+      projectKeys: Object.keys(actualProject || {}),
+      projectType: typeof actualProject,
+      isProxy: actualProject?.constructor?.name,
+      // Log actual values
+      path_with_namespace: actualProject?.path_with_namespace,
+      namespace: actualProject?.namespace,
+      namespaceName: actualProject?.namespace?.name,
+      name: actualProject?.name,
+      id: actualProject?.id,
+      // Only log full project in debug mode to avoid clutter
+      wasWrapped: project !== actualProject
+    })
+    
+    if (authStore.currentProvider === 'github') {
+      // First try path_with_namespace (most reliable)
+      if (actualProject?.path_with_namespace) {
+        console.log('🔍 [COMMIT STORE] Using path_with_namespace:', actualProject.path_with_namespace)
+        return actualProject.path_with_namespace
+      }
+      
+      // Fallback: construct from namespace and name
+      if (actualProject?.namespace?.name && actualProject?.name) {
+        const identifier = `${actualProject.namespace.name}/${actualProject.name}`
+        console.log('🔍 [COMMIT STORE] Constructed from namespace/name:', identifier)
+        return identifier
+      }
+      
+      // Last resort: check if name contains the full path (owner/repo)
+      if (actualProject?.name && actualProject.name.includes('/')) {
+        console.log('🔍 [COMMIT STORE] Using name as full path:', actualProject.name)
+        return actualProject.name
+      }
+      
+      // Additional fallback: check if any field contains what looks like owner/repo format
+      const possibleFields = [
+        actualProject?.full_name,
+        actualProject?.path_with_namespace, 
+        actualProject?.name,
+        actualProject?.id
+      ].filter(Boolean)
+      
+      for (const field of possibleFields) {
+        const fieldStr = String(field)
+        if (fieldStr && fieldStr.includes('/') && fieldStr.split('/').length === 2) {
+          console.log('🔍 [COMMIT STORE] Found owner/repo format in field:', fieldStr)
+          return fieldStr
+        }
+      }
+      
+      console.error('🔴 [COMMIT STORE] Cannot construct GitHub project identifier from project:')
+      console.error('🔴 [COMMIT STORE] Project details:', JSON.stringify(actualProject, null, 2))
+      throw new Error(`Cannot construct GitHub project identifier. Missing required fields: path_with_namespace, or namespace.name + name. Available fields: ${Object.keys(actualProject || {}).join(', ')}`)
+    }
+    
+    const identifier = String(actualProject?.id)
+    console.log('🔍 [COMMIT STORE] Non-GitHub identifier:', identifier)
+    return identifier
   }
 
   // Event-driven actions
@@ -159,14 +230,30 @@ export const useCommitStore = defineStore('commit', () => {
       const projectStore = useProjectStore()
 
     if (!authStore.isUserAuthenticated || !projectStore.currentProject) {
-        return
-      }
+      console.log('🔴 [COMMIT STORE] fetchBranchesForProject: Missing auth or project context')
+      console.log('🔴 [COMMIT STORE] Auth state:', { 
+        isAuthenticated: authStore.isUserAuthenticated, 
+        provider: authStore.currentProvider 
+      })
+      console.log('🔴 [COMMIT STORE] Project state:', { 
+        hasProject: !!projectStore.currentProject,
+        projectStatus: projectStore.status
+      })
+      return
+    }
 
     try {
       statusBranches.value = 'loading'
       errorMsgBranches.value = null
 
       const projectId = getProjectIdentifier(projectStore.currentProject)
+      
+      // Additional validation: make sure we have a valid project identifier
+      if (!projectId || projectId.includes('undefined') || projectId === 'undefined') {
+        throw new Error(`Invalid project identifier: "${projectId}". Project data may be incomplete.`)
+      }
+
+      console.log('🔍 [COMMIT STORE] fetchBranchesForProject: Using project identifier:', projectId)
 
       await eventBus.emit('BRANCHES_LOADING_STARTED', { 
         projectId 
@@ -190,8 +277,9 @@ export const useCommitStore = defineStore('commit', () => {
     } catch (error: any) {
       statusBranches.value = 'error'
       errorMsgBranches.value = error.message || 'Failed to fetch branches'
+      console.error('❌ [COMMIT STORE] fetchBranchesForProject error:', error)
       
-      const projectId = getProjectIdentifier(projectStore.currentProject)
+      const projectId = projectStore.currentProject ? getProjectIdentifier(projectStore.currentProject) : 'unknown'
       await eventBus.emit('BRANCHES_LOADING_FAILED', { 
         error: errorMsgBranches.value || 'Failed to fetch branches', 
         projectId 
@@ -440,23 +528,19 @@ export const useCommitStore = defineStore('commit', () => {
     isMoreCommits,
     currentPage,
     commitFilters,
-
     // Status
     statusBranches,
     statusCommits,
     statusCommitBundles,
-
     // Errors
     errorMsgBranches,
     errorMsgCommits,
     errorMsgCommitBundles,
-
     // Getters
     activeBranch,
     defaultBranch,
     isLoadingBranches,
     isLoadingCommits,
-
     // Actions
     fetchBranchesForProject,
     selectBranch,

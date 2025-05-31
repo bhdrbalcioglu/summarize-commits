@@ -95,10 +95,17 @@ export const useAiResponseStore = defineStore('aiResponse', {
         }
         console.log('🌐 [aiResponseStore] Sending analysis request to backend:', requestPayload)
 
-        const { data } = await apiClient.post<BackendAnalysisResponse>('/openai/analyze-commits', requestPayload)
+        const { data } = await apiClient.post<any>('/openai/analyze-commits', requestPayload)
         console.log('✅ [aiResponseStore] Analysis response received:', data)
 
-        this.analysisResult = data.analysisResults
+        // Handle potential response wrapping from backend
+        let analysisData = data
+        if (analysisData && typeof analysisData === 'object' && 'status' in analysisData && 'data' in analysisData) {
+          console.log(`[aiResponseStore] Backend response is wrapped, extracting data from status: ${analysisData.status}`)
+          analysisData = analysisData.data
+        }
+
+        this.analysisResult = analysisData.analysisResults
         console.log('💾 [aiResponseStore] Analysis results stored:', this.analysisResult?.length, 'results')
       } catch (err: any) {
         console.error('💥 [aiResponseStore] Error during analysis:', err)
@@ -141,10 +148,17 @@ export const useAiResponseStore = defineStore('aiResponse', {
         }
         console.log('🌐 [aiResponseStore] Sending notes generation request:', requestPayload)
 
-        const { data } = await apiClient.post<BackendUpdateNotesResponse>('/openai/generate-notes', requestPayload)
+        const { data } = await apiClient.post<any>('/openai/generate-notes', requestPayload)
         console.log('✅ [aiResponseStore] Notes generation response received:', data)
 
-        this.notesResult = data.updateNotes
+        // Handle potential response wrapping from backend
+        let notesData = data
+        if (notesData && typeof notesData === 'object' && 'status' in notesData && 'data' in notesData) {
+          console.log(`[aiResponseStore] Backend response is wrapped, extracting data from status: ${notesData.status}`)
+          notesData = notesData.data
+        }
+
+        this.notesResult = notesData.updateNotes
         console.log('💾 [aiResponseStore] Notes result stored, length:', this.notesResult?.length, 'characters')
       } catch (err: any) {
         console.error('💥 [aiResponseStore] Error during notes generation:', err)

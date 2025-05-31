@@ -441,12 +441,38 @@ const hasProInfo = computed(() => {
 })
 
 onMounted(async () => {
+  console.log(`📱 [USER VIEW] Component mounted`)
+  console.log(`📱 [USER VIEW] Initial auth state: isAuthenticated=${authStore.isUserAuthenticated}, isLoading=${authStore.isLoading}`)
+
+  if (authStore.user) {
+    console.log(`📱 [USER VIEW] Found existing user: ${authStore.user.username} (${authStore.user.provider})`)
+  } else {
+    console.log(`📱 [USER VIEW] No existing user data found`)
+  }
+
   if (!authStore.isUserAuthenticated && !authStore.isLoading) {
+    console.log(`📱 [USER VIEW] User not authenticated, attempting to fetch current user...`)
     await authStore.fetchCurrentUser()
+    console.log(`📱 [USER VIEW] Fetch current user completed. Now authenticated: ${authStore.isUserAuthenticated}`)
+  } else if (authStore.isLoading) {
+    console.log(`📱 [USER VIEW] Auth store is currently loading, waiting...`)
+  } else {
+    console.log(`📱 [USER VIEW] User already authenticated, skipping auth check`)
   }
+
   // Fetch latest projects if user is authenticated and we haven't loaded them yet
-  if (authStore.isUserAuthenticated && !projectListStore.isLoadingLatest && projectListStore.latestProjects.length === 0) {
+  const hasLatestProjects = Array.isArray(projectListStore.latestProjects) && projectListStore.latestProjects.length > 0
+  if (authStore.isUserAuthenticated && !projectListStore.isLoadingLatest && !hasLatestProjects) {
+    console.log(`📱 [USER VIEW] User authenticated, fetching latest projects...`)
+    console.log(`📱 [USER VIEW] Projects state: isLoading=${projectListStore.isLoadingLatest}, count=${Array.isArray(projectListStore.latestProjects) ? projectListStore.latestProjects.length : 0}`)
     await projectListStore.fetchLatestProjects()
+    console.log(`📱 [USER VIEW] Projects fetch completed. Count: ${Array.isArray(projectListStore.latestProjects) ? projectListStore.latestProjects.length : 0}`)
+  } else if (!authStore.isUserAuthenticated) {
+    console.log(`📱 [USER VIEW] User not authenticated, skipping project fetch`)
+  } else {
+    console.log(`📱 [USER VIEW] Projects already loaded or loading, skipping fetch`)
   }
+
+  console.log(`📱 [USER VIEW] Mount process complete`)
 })
 </script>
