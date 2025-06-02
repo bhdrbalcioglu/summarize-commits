@@ -27,7 +27,7 @@
           that users actually want to read—in seconds, not hours.
         </p>
         <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-          <EnhancedButton variant="primary" size="lg" text="Start Creating Beautiful Release Notes" @click="handleGetStarted" />
+          <EnhancedButton variant="primary" size="lg" :text="authStore.isUserAuthenticated ? 'Go to Your Profile' : 'Start Creating Beautiful Release Notes'" @click="handleGetStarted" />
           <EnhancedButton variant="outline" size="lg" text="See It in Action" @click="handleWatchDemo" />
         </div>
       </div>
@@ -187,6 +187,9 @@ import FloatingBadge from '@/components/FloatingBadge.vue'
 import CompatibilitySection from '@/components/CompatibilitySection.vue'
 import EnhancedButton from '@/components/ui/EnhancedButton.vue'
 import { useScrollReveal, revealVariants } from '@/composables/useScrollReveal'
+import { useAuthStore } from '@/stores/authStore'
+import { useRouter } from 'vue-router'
+import { onMounted } from 'vue'
 
 // Scroll reveal setup for different sections
 const { elementRef: beforeAfterRef, isVisible: isBeforeAfterVisible } = useScrollReveal({ delay: 200 })
@@ -227,11 +230,50 @@ const compatibilityVariant = {
   visible: { opacity: 1, y: 0, transition: { duration: 600, ease: 'easeOut' } }
 }
 
+// Get auth store and router
+const authStore = useAuthStore()
+const router = useRouter()
+
+// Ensure auth state is checked when component mounts
+onMounted(async () => {
+  console.log('🏠 [HOME VIEW] Component mounted, checking auth state...')
+  console.log('🏠 [HOME VIEW] Current auth state:', {
+    isAuthenticated: authStore.isUserAuthenticated,
+    hasUser: !!authStore.user,
+    hasTriedFetching: authStore._hasTriedFetchingUser
+  })
+
+  // If we haven't tried fetching user data yet, initialize auth
+  if (!authStore._hasTriedFetchingUser && !authStore.user) {
+    console.log('🏠 [HOME VIEW] Auth not initialized, calling initializeAuth...')
+    try {
+      await authStore.initializeAuth()
+      console.log('🏠 [HOME VIEW] Auth initialized. New state:', {
+        isAuthenticated: authStore.isUserAuthenticated,
+        hasUser: authStore.hasUser,
+        userName: authStore.userName,
+        userEmail: authStore.userEmail
+      })
+    } catch (error) {
+      console.log('🏠 [HOME VIEW] Auth initialization failed:', error)
+    }
+  } else {
+    console.log('🏠 [HOME VIEW] Auth already initialized or user exists')
+  }
+})
+
 // Button handlers
 const handleGetStarted = () => {
-  const loginButton = document.querySelector('[data-login-button]')
-  if (loginButton) {
-    ;(loginButton as HTMLElement).click()
+  // Check if user is already authenticated
+  if (authStore.isUserAuthenticated) {
+    // If logged in, go to user page
+    router.push('/user')
+  } else {
+    // If not logged in, show login modal
+    const loginButton = document.querySelector('[data-login-button]')
+    if (loginButton) {
+      ;(loginButton as HTMLElement).click()
+    }
   }
 }
 

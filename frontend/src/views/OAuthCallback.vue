@@ -77,6 +77,11 @@ const handleCallback = async () => {
 
       if (session?.provider_token) {
         console.log('✅ [OAUTH CALLBACK] Captured provider tokens from auth state change')
+        console.log('🔑 [REFRESH TOKEN DEBUG] Provider refresh token from auth state change:', {
+          hasProviderRefreshToken: !!session.provider_refresh_token,
+          providerRefreshTokenLength: session.provider_refresh_token?.length || 0,
+          providerRefreshTokenPreview: session.provider_refresh_token ? session.provider_refresh_token.substring(0, 20) + '...' : 'null'
+        })
         providerTokens = {
           provider_token: session.provider_token,
           provider_refresh_token: session.provider_refresh_token || undefined
@@ -94,10 +99,20 @@ const handleCallback = async () => {
 
     const { access_token, refresh_token } = data.session
     console.log('✅ [OAUTH CALLBACK] Got session tokens from Supabase')
+    console.log('🔑 [REFRESH TOKEN DEBUG] Supabase session refresh token:', {
+      hasRefreshToken: !!refresh_token,
+      refreshTokenLength: refresh_token?.length || 0,
+      refreshTokenPreview: refresh_token ? refresh_token.substring(0, 20) + '...' : 'null'
+    })
 
     // 3️⃣ Check if we captured provider tokens from the session itself
     if (data.session.provider_token) {
       console.log('✅ [OAUTH CALLBACK] Found provider tokens in session')
+      console.log('🔑 [REFRESH TOKEN DEBUG] Provider refresh token from session:', {
+        hasProviderRefreshToken: !!data.session.provider_refresh_token,
+        providerRefreshTokenLength: data.session.provider_refresh_token?.length || 0,
+        providerRefreshTokenPreview: data.session.provider_refresh_token ? data.session.provider_refresh_token.substring(0, 20) + '...' : 'null'
+      })
       providerTokens = {
         provider_token: data.session.provider_token,
         provider_refresh_token: data.session.provider_refresh_token || undefined
@@ -107,6 +122,14 @@ const handleCallback = async () => {
     // 4️⃣ Hand tokens to backend – sets HttpOnly cookies and gets user data
     console.log('🔗 [OAUTH CALLBACK] Sending tokens to backend for cookie setting')
     console.log('🔑 [OAUTH CALLBACK] Including provider tokens:', !!providerTokens.provider_token)
+    console.log('🔑 [REFRESH TOKEN DEBUG] Final tokens being sent to backend:', {
+      hasSupabaseRefreshToken: !!refresh_token,
+      hasProviderRefreshToken: !!providerTokens.provider_refresh_token,
+      supabaseRefreshTokenLength: refresh_token?.length || 0,
+      providerRefreshTokenLength: providerTokens.provider_refresh_token?.length || 0,
+      supabaseRefreshTokenPreview: refresh_token ? refresh_token.substring(0, 20) + '...' : 'null',
+      providerRefreshTokenPreview: providerTokens.provider_refresh_token ? providerTokens.provider_refresh_token.substring(0, 20) + '...' : 'null'
+    })
 
     const response = await apiService.post('/auth/session', {
       access_token,

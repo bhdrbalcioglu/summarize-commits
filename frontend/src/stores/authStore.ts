@@ -26,6 +26,37 @@ export const useAuthStore = defineStore('auth', () => {
   // Actions
   const login = async (provider: 'github' | 'gitlab' = 'github') => {
     console.log(`🔐 [AUTH STORE] Initiating login with provider: ${provider}`)
+    
+    // Check if user is already authenticated
+    if (isUserAuthenticated.value) {
+      console.log('✅ [AUTH STORE] User already authenticated, redirecting to user page')
+      if (typeof window !== 'undefined') {
+        window.location.href = '/user'
+      }
+      return
+    }
+    
+    // Check for existing Supabase session before starting OAuth
+    try {
+      const { supabase } = await import('@/lib/supabaseClient')
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session && session.user) {
+        console.log('✅ [AUTH STORE] Found existing Supabase session, attempting to restore...')
+        await initializeAuth()
+        
+        if (isUserAuthenticated.value) {
+          console.log('✅ [AUTH STORE] Session restored successfully, redirecting to user page')
+          if (typeof window !== 'undefined') {
+            window.location.href = '/user'
+          }
+          return
+        }
+      }
+    } catch (sessionError) {
+      console.log('ℹ️ [AUTH STORE] No existing session found, proceeding with OAuth')
+    }
+
     console.log('🔗 [AUTH STORE] Using frontend Supabase OAuth flow')
     console.log(`🔗 [AUTH STORE] Provider: ${provider}`)
 
@@ -81,12 +112,12 @@ export const useAuthStore = defineStore('auth', () => {
       // Use backend /me endpoint with credentials (cookies)
       const response = await apiService.get('/auth/me')
 
-      if (response.data?.user) {
-        console.log('✅ [AUTH STORE] User authenticated via backend:', response.data.user.email)
-        user.value = response.data.user
+      if (response.data && response.data.id) {
+        console.log('✅ [AUTH STORE] User authenticated via backend:', response.data.email)
+        user.value = response.data
         isAuthenticated.value = true
-        authProvider.value = response.data.user.provider as AuthProvider
-        return response.data.user
+        authProvider.value = response.data.provider as AuthProvider
+        return response.data
       } else {
         console.log('⚠️ [AUTH STORE] No user data in response')
         user.value = null
@@ -117,6 +148,15 @@ export const useAuthStore = defineStore('auth', () => {
 
   const logout = async () => {
     console.log('🚪 [AUTH STORE] Starting logout...')
+
+    try {
+      // Sign out from Supabase first
+      const { supabase } = await import('@/lib/supabaseClient')
+      await supabase.auth.signOut()
+      console.log('✅ [AUTH STORE] Supabase logout successful')
+    } catch (error) {
+      console.warn('⚠️ [AUTH STORE] Supabase logout failed:', error)
+    }
 
     try {
       // Call backend logout endpoint
@@ -177,9 +217,98 @@ export const useAuthStore = defineStore('auth', () => {
     console.log('🚀 [AUTH STORE] Initializing authentication state...')
 
     try {
-      await fetchCurrentUser()
+      // First, check if we have a valid Supabase session
+      const { supabase } = await import('@/lib/supabaseClient')
+      const { data: { session }, error } = await supabase.auth.getSession()
+      
+      if (session && !error) {
+        console.log('✅ [AUTH STORE] Found valid Supabase session, restoring authentication')
+        console.log('🔄 [AUTH STORE] Session expires at:', new Date(session.expires_at! * 1000).toLocaleString())
+        
+        // Try to sync with backend using existing session
+        try {
+          await fetchCurrentUser()
+          console.log('✅ [AUTH STORE] Successfully synchronized with backend')
+        } catch (backendError) {
+          console.warn('⚠️ [AUTH STORE] Backend sync failed, trying session handoff...')
+          
+          // If backend sync fails, try to update backend with current tokens
+          try {
+            const response = await apiService.post('/auth/session', {
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+              provider_token: session.provider_token,
+              provider_refresh_token: session.provider_refresh_token
+            })
+            
+            if (response.data) {
+              user.value = response.data
+              isAuthenticated.value = true
+              authProvider.value = response.data.provider as AuthProvider
+              console.log('✅ [AUTH STORE] Session handoff successful, user restored')
+            }
+          } catch (handoffError) {
+            console.error('❌ [AUTH STORE] Session handoff failed, falling back to standard flow')
+            throw handoffError
+          }
+        }
+      } else {
+        console.log('ℹ️ [AUTH STORE] No Supabase session found, trying backend cookies...')
+        await fetchCurrentUser()
+      }
     } catch (error) {
       console.log('ℹ️ [AUTH STORE] No existing session found during initialization')
+    }
+  }
+
+  // Set up automatic session monitoring
+  const setupSessionMonitoring = async () => {
+    console.log('🔄 [AUTH STORE] Setting up session monitoring...')
+    
+    try {
+      const { supabase } = await import('@/lib/supabaseClient')
+      
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('🔄 [AUTH STORE] Auth state changed:', event)
+        
+        switch (event) {
+          case 'TOKEN_REFRESHED':
+            console.log('🔄 [AUTH STORE] Token refreshed automatically')
+            if (session) {
+              console.log('🔄 [AUTH STORE] New session expires at:', new Date(session.expires_at! * 1000).toLocaleString())
+              
+              // Sync refreshed tokens with backend
+              try {
+                await apiService.post('/auth/session', {
+                  access_token: session.access_token,
+                  refresh_token: session.refresh_token,
+                  provider_token: session.provider_token,
+                  provider_refresh_token: session.provider_refresh_token
+                })
+                console.log('✅ [AUTH STORE] Backend synchronized with refreshed tokens')
+              } catch (error) {
+                console.warn('⚠️ [AUTH STORE] Failed to sync refreshed tokens with backend:', error)
+              }
+            }
+            break
+            
+          case 'SIGNED_OUT':
+            console.log('🔓 [AUTH STORE] User signed out via Supabase')
+            user.value = null
+            isAuthenticated.value = false
+            authProvider.value = null
+            break
+            
+          case 'SIGNED_IN':
+            console.log('✅ [AUTH STORE] User signed in via Supabase')
+            // Let the OAuth callback handle the session handoff
+            break
+        }
+      })
+      
+      console.log('✅ [AUTH STORE] Session monitoring active')
+    } catch (error) {
+      console.error('❌ [AUTH STORE] Failed to setup session monitoring:', error)
     }
   }
 
@@ -204,6 +333,7 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     fetchCurrentUser,
     handleCallback,
-    initializeAuth
+    initializeAuth,
+    setupSessionMonitoring
   }
 })

@@ -1,8 +1,6 @@
 // frontend/src/router/index.ts
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
-// import GitLabCallbackView from '../views/GitlabCallbackView.vue'; // To be re-evaluated
-// import GithubCallbackView from '../views/GithubCallbackView.vue'; // To be re-evaluated
 import GroupsView from '../views/GroupsView.vue'
 import ProjectsView from '../views/ProjectsView.vue'
 import UserView from '../views/UserView.vue'
@@ -20,7 +18,7 @@ const routes: Array<RouteRecordRaw> = [
     path: '/',
     name: 'Home',
     component: HomeView,
-    meta: { requiresAuth: false, guestOnly: true } // GuestOnly: if logged in, redirect away from home/login
+    meta: { requiresAuth: false } // Allow both guest and authenticated users
   },
   {
     path: '/login',
@@ -35,25 +33,7 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/OAuthCallback.vue'),
     meta: { requiresAuth: false }
   },
-  // OAuth Callback Routes from Backend:
-  // The backend now handles the OAuth code exchange and then redirects to a standard frontend route.
-  // These specific frontend callback views might no longer be directly hit or needed in the same way.
-  // The backend will redirect to a route like '/' or '/dashboard' after successful auth.
-  // Let's assume for now the backend redirects to '/' after successful login.
-  // If backend redirects to a specific path like '/auth/success', you'd define that.
 
-  // {
-  //   path: '/oauth/gitlab/callback', // Or whatever your backend redirects to
-  //   name: 'AuthCallbackHandler', // A generic handler or handled by the target route
-  //   component: HomeView, // Or a dedicated component that calls authStore.fetchCurrentUser()
-  //   // beforeEnter: async (to, from, next) => {
-  //   //   const authStore = useAuthStore();
-  //   //   if (!authStore.isUserAuthenticated) { // If not yet picked up by initializeAuth
-  //   //      await authStore.fetchCurrentUser();
-  //   //   }
-  //   //   next(authStore.isUserAuthenticated ? '/' : '/'); // Redirect to home or dashboard
-  //   // },
-  // },
   {
     path: '/groups',
     name: 'Groups',
@@ -88,15 +68,13 @@ const routes: Array<RouteRecordRaw> = [
     meta: { requiresAuth: true },
     beforeEnter: async (to) => {
       const authStore = useAuthStore()
-      
+
       // Ensure user is authenticated before attempting to load project
       if (!authStore.isUserAuthenticated) {
         return { name: 'Home', query: { redirect: to.fullPath } }
       }
 
-      const projectIdentifier = Array.isArray(to.params.projectIdentifier) 
-        ? to.params.projectIdentifier[0] 
-        : to.params.projectIdentifier
+      const projectIdentifier = Array.isArray(to.params.projectIdentifier) ? to.params.projectIdentifier[0] : to.params.projectIdentifier
 
       if (!projectIdentifier) {
         return { name: 'User' } // Redirect to user page if no project identifier
@@ -150,7 +128,8 @@ router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
   // Quick guard exit for same route navigation (performance optimization)
-  if (to.fullPath === from.fullPath) {
+  // BUT allow auth checks for home page to ensure proper button state
+  if (to.fullPath === from.fullPath && to.name !== 'Home') {
     console.log(`🛣️ [ROUTER GUARD] Same route navigation detected, skipping guard`)
     return next()
   }
@@ -206,25 +185,17 @@ router.beforeEach(async (to, from, next) => {
 // Global afterEach hook for store cleanup
 router.afterEach((to, from) => {
   // Reset dependent stores when navigating away from a project to a different project
-  if (
-    from.name === 'ProjectPage' || 
-    from.name === 'ProjectCommitsView' || 
-    from.name === 'ProjectFileTreeView'
-  ) {
-    const fromProjectId = Array.isArray(from.params.projectIdentifier) 
-      ? from.params.projectIdentifier[0] 
-      : from.params.projectIdentifier
+  if (from.name === 'ProjectPage' || from.name === 'ProjectCommitsView' || from.name === 'ProjectFileTreeView') {
+    const fromProjectId = Array.isArray(from.params.projectIdentifier) ? from.params.projectIdentifier[0] : from.params.projectIdentifier
 
-    const toProjectId = Array.isArray(to.params.projectIdentifier) 
-      ? to.params.projectIdentifier[0] 
-      : to.params.projectIdentifier
+    const toProjectId = Array.isArray(to.params.projectIdentifier) ? to.params.projectIdentifier[0] : to.params.projectIdentifier
 
     // Only reset if we're navigating to a different project or away from projects entirely
     // BUT NOT when going to CommitSummaries (which displays AI results)
     if (fromProjectId && fromProjectId !== toProjectId && to.name !== 'CommitSummaries') {
       const commitStore = useCommitStore()
       const aiResponseStore = useAiResponseStore()
-      
+
       commitStore.$reset()
       aiResponseStore.resetAiState()
     }

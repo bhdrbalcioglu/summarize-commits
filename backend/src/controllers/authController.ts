@@ -209,7 +209,7 @@ export const authCallback = async (
               environment.NODE_ENV === "production"
                 ? ("none" as const)
                 : ("lax" as const),
-            maxAge: 3600000, // 1 hour
+            maxAge: 3 * 24 * 60 * 60 * 1000, // 3 days
           };
 
           console.log(`🍪 [AUTH CALLBACK] Cookie settings:`, {
@@ -267,7 +267,7 @@ export const authCallback = async (
           environment.NODE_ENV === "production"
             ? ("none" as const)
             : ("lax" as const),
-        maxAge: 3600000, // 1 hour
+        maxAge: 3 * 24 * 60 * 60 * 1000, // 3 days
       };
 
       // Set tokens in cookies
@@ -566,7 +566,7 @@ export const sessionHandoff = async (
         environment.NODE_ENV === "production"
           ? ("none" as const)
           : ("lax" as const),
-      maxAge: 60 * 60 * 1000, // 1 hour
+      maxAge: 3 * 24 * 60 * 60 * 1000, // 3 days
     };
 
     res.cookie("sb-access-token", access_token, cookieOptions);

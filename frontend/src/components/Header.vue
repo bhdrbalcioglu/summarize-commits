@@ -84,7 +84,14 @@ const navigateToHome = () => {
 }
 
 const handleLogin = async (provider: 'gitlab' | 'github') => {
-  await authStore.login(provider)
+  try {
+    await authStore.login(provider)
+    // Close modal if login was successful
+    toggleModal()
+  } catch (error) {
+    console.error('Login failed:', error)
+    // Keep modal open to show error or retry
+  }
 }
 
 const handleThemeToggle = () => {

@@ -22,14 +22,25 @@ export const attachSupabaseClient: RequestHandler = async (req, res, next) => {
 
     // If user is authenticated, create user-scoped client
     if (req.auth) {
-      // Extract token from cookies or header
-      let token = req.cookies?.jwt;
+      // Extract token from cookies or header (match isAuthenticated middleware priority)
+      let token: string | undefined;
       
+      // Priority 1: sb-access-token cookie (most secure, HttpOnly)
+      if (req.cookies?.['sb-access-token']) {
+        token = req.cookies['sb-access-token'];
+      }
+      
+      // Priority 2: Authorization header (fallback for sessionStorage)
       if (!token) {
         const authHeader = req.headers.authorization;
         if (authHeader && authHeader.startsWith("Bearer ")) {
           token = authHeader.split(" ")[1];
         }
+      }
+      
+      // Priority 3: jwt cookie (legacy fallback)
+      if (!token && req.cookies?.jwt) {
+        token = req.cookies.jwt;
       }
 
       if (token) {

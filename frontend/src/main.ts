@@ -24,6 +24,32 @@ const themeStore = useThemeStore()
 // Initialize theme first (synchronous)
 themeStore.initializeTheme()
 
+// Set up session monitoring for automatic token refresh
+authStore.setupSessionMonitoring()
+
+// Add app focus handler for session refresh
+if (typeof window !== 'undefined') {
+  // Refresh session when app regains focus (user returns to tab)
+  window.addEventListener('focus', () => {
+    console.log('🔄 [MAIN] App focused - checking session state')
+    if (authStore.isUserAuthenticated) {
+      authStore.initializeAuth().catch(error => {
+        console.warn('⚠️ [MAIN] Session refresh on focus failed:', error)
+      })
+    }
+  })
+  
+  // Refresh session when page becomes visible (user switches back to tab)
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && authStore.isUserAuthenticated) {
+      console.log('🔄 [MAIN] Page visible - checking session state')
+      authStore.initializeAuth().catch(error => {
+        console.warn('⚠️ [MAIN] Session refresh on visibility failed:', error)
+      })
+    }
+  })
+}
+
 // Let the router guard handle auth initialization to avoid race conditions
 console.log('🚀 [MAIN] App initialization - auth will be handled by router guard')
 app.use(router) // Install router first
