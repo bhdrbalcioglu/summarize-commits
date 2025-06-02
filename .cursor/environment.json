@@ -1,0 +1,9 @@
+{
+  "baseImage": "node:18",
+  "setupCommands": [
+    "npm install --prefix backend"
+  ],
+  "workingDirectory": "/workspace",
+  "install": "npm install",
+  "start": "npm run dev "
+}
